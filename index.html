@@ -76,22 +76,19 @@
     let globalStationsData = [];
 
     function openNativeMap(lat, lng, name, district) {
-      const cleanLat = parseFloat(lat);
-      const cleanLng = parseFloat(lng);
-
-      if (!isNaN(cleanLat) && !isNaN(cleanLng)) {
-        // Android Google Haritalar uygulamasını doğrudan açan resmi Intent URL'i
-        const intentUrl = `intent://maps.google.com/maps?daddr=${cleanLat},${cleanLng}#Intent;scheme=https;package=com.google.android.apps.maps;end`;
-        window.location.href = intentUrl;
+      let geoUrl = '';
+      if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
+        geoUrl = `geo:${lat},${lng}?q=${lat},${lng}(${encodeURIComponent(name || 'Akaryakıt İstasyonu')})`;
       } else {
         const query = encodeURIComponent(`${name || 'Akaryakıt'} ${district || ''} Afyonkarahisar`);
-        const intentUrl = `intent://maps.google.com/maps?q=${query}#Intent;scheme=https;package=com.google.android.apps.maps;end`;
-        window.location.href = intentUrl;
+        geoUrl = `geo:0,0?q=${query}`;
       }
+      window.location.href = geoUrl;
     }
 
+    // Haversine formülü ile hassas mesafe hesabı (km)
     function calculateDistance(lat1, lon1, lat2, lon2) {
-      const R = 6371;
+      const R = 6371; // Dünya yarıçapı
       const dLat = (lat2 - lat1) * Math.PI / 180;
       const dLon = (lon2 - lon1) * Math.PI / 180;
       const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
@@ -106,7 +103,7 @@
       container.innerHTML = '';
       
       stations.forEach(station => {
-        const distBadge = (station.distance !== undefined && !isNaN(station.distance) && station.distance !== 99999) 
+        const distBadge = (station.distance !== undefined && !isNaN(station.distance)) 
           ? `<span class="distance-badge">📍 ${station.distance} km</span>` 
           : '';
         
@@ -143,7 +140,7 @@
       const permBtn = document.getElementById('grant-location-btn');
 
       if (navigator.geolocation) {
-        locationInfo.innerText = "📍 Anlık konum alınıyor...";
+        locationInfo.innerText = "📍 Anlık hassas konumunuz alınıyor...";
         navigator.geolocation.getCurrentPosition(
           (position) => {
             const userLat = position.coords.latitude;
@@ -170,7 +167,7 @@
             if (err.code === err.PERMISSION_DENIED) {
               locationInfo.innerText = "⚠️ Konum izni verilmedi. Cihaz ayarlarınızdan izin verin.";
             } else {
-              locationInfo.innerText = "⚠️ Konum alınamadı. Lütfen GPS'i açın.";
+              locationInfo.innerText = "⚠️ GPS konumu alınamadı. Lütfen GPS'i açıp tekrar deneyin.";
             }
             permBtn.style.display = 'block';
           },
@@ -219,4 +216,3 @@
   </script>
 </body>
 </html>
-
