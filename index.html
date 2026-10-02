@@ -13,7 +13,24 @@
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f5f7; margin: 0; padding: 16px; }
     h2 { color: #d9534f; text-align: center; margin-bottom: 4px; font-size: 20px; }
-    .subtitle { text-align: center; color: #666; font-size: 12px; margin-bottom: 18px; }
+    .subtitle { text-align: center; color: #666; font-size: 12px; margin-bottom: 12px; }
+    
+    /* Konum İzin Butonu Stili */
+    .permission-btn {
+      display: none;
+      margin: 0 auto 16px auto;
+      background: #e53935;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(229,57,53,0.3);
+    }
+    .permission-btn:active { background: #c62828; }
+
     .card { background: white; border-radius: 12px; padding: 16px; margin-bottom: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
     .station-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
     .station-name { font-weight: 700; font-size: 16px; color: #111; }
@@ -47,12 +64,15 @@
 
   <h2>⛽ Afyon Akaryakıt Fiyatları</h2>
   <div class="subtitle" id="location-info">📍 Konum kontrol ediliyor...</div>
+  <button id="grant-location-btn" class="permission-btn" onclick="requestLocationPermission()">📍 Konum İznini Aç / Yakın İstasyonları Sırala</button>
+  
   <div id="status">Veriler yükleniyor...</div>
   <div id="stations-list"></div>
 
   <script>
     const SUPABASE_URL = 'https://dzapuhihjzdmzvwzcxht.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_atDC1UU40N7N-U-c3u__4A_mKuI2Oum';
+    let globalStationsData = [];
 
     function calculateDistance(lat1, lon1, lat2, lon2) {
       const R = 6371;
@@ -71,7 +91,15 @@
       
       stations.forEach(station => {
         const distBadge = station.distance ? `<span class="distance-badge">📍 ${station.distance} km</span>` : '';
-        const mapUrl = `https://www.google.com/maps/dir/?api=1&destination=${station.latitude},${station.longitude}`;
+        
+        // Native Android Intent Yapısı
+        let mapUrl = '';
+        if (station.latitude && station.longitude) {
+          mapUrl = `intent://maps.google.com/maps?daddr=${station.latitude},${station.longitude}#Intent;scheme=https;package=com.google.android.apps.maps;end;`;
+        } else {
+          const query = encodeURIComponent(`${station.name || 'Akaryakıt'} ${station.district || ''} Afyonkarahisar`);
+          mapUrl = `intent://maps.google.com/maps?q=${query}#Intent;scheme=https;package=com.google.android.apps.maps;end;`;
+        }
 
         const card = `
           <div class="card">
@@ -94,16 +122,55 @@
                 <span class="price-value">₺${station.lpg || '-'}</span>
               </div>
             </div>
-            <a href="${mapUrl}" target="_blank" class="map-btn">🗺️ Haritada Aç / Yol Tarifi</a>
+            <a href="${mapUrl}" class="map-btn">🗺️ Haritada Aç / Yol Tarifi</a>
           </div>
         `;
         container.innerHTML += card;
       });
     }
 
+    function requestLocationPermission() {
+      const locationInfo = document.getElementById('location-info');
+      const permBtn = document.getElementById('grant-location-btn');
+
+      if (navigator.geolocation) {
+        locationInfo.innerText = "📍 Konumunuz alınıyor...";
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const userLat = position.coords.latitude;
+            const userLng = position.coords.longitude;
+            locationInfo.innerText = "📍 En yakından uzağa sıralandı";
+            permBtn.style.display = 'none';
+
+            if (globalStationsData.length > 0) {
+              const sortedStations = globalStationsData.map(station => {
+                if (station.latitude && station.longitude) {
+                  const dist = calculateDistance(userLat, userLng, parseFloat(station.latitude), parseFloat(station.longitude));
+                  return { ...station, distance: parseFloat(dist) };
+                }
+                return station;
+              }).sort((a, b) => (a.distance || 9999) - (b.distance || 9999));
+
+              renderStations(sortedStations);
+            }
+          },
+          (err) => {
+            if (err.code === err.PERMISSION_DENIED) {
+              locationInfo.innerText = "⚠️ Konum izni verilmedi. Cihaz ayarlarınızdan izin verin.";
+            } else {
+              locationInfo.innerText = "⚠️ Konum alınamadı (GPS kapalı olabilir).";
+            }
+            permBtn.style.display = 'block';
+          },
+          { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+        );
+      } else {
+        locationInfo.innerText = "📍 Tarayıcınız konum servisini desteklemiyor";
+      }
+    }
+
     async function initApp() {
       const statusDiv = document.getElementById('status');
-      const locationInfo = document.getElementById('location-info');
 
       try {
         const response = await fetch(`${SUPABASE_URL}/rest/v1/stations?select=*`, {
@@ -119,37 +186,18 @@
           return;
         }
 
-        const stations = await response.json();
+        globalStationsData = await response.json();
 
-        if (!stations || stations.length === 0) {
+        if (!globalStationsData || globalStationsData.length === 0) {
           statusDiv.innerText = "Tabloda kayıtlı veri bulunamadı.";
           return;
         }
 
         statusDiv.style.display = 'none';
-        renderStations(stations);
+        renderStations(globalStationsData);
 
-        if (navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition((position) => {
-            const userLat = position.coords.latitude;
-            const userLng = position.coords.longitude;
-            locationInfo.innerText = "📍 En yakından uzağa sıralandı";
-
-            const sortedStations = stations.map(station => {
-              if (station.latitude && station.longitude) {
-                const dist = calculateDistance(userLat, userLng, parseFloat(station.latitude), parseFloat(station.longitude));
-                return { ...station, distance: parseFloat(dist) };
-              }
-              return station;
-            }).sort((a, b) => (a.distance || 9999) - (b.distance || 9999));
-
-            renderStations(sortedStations);
-          }, (err) => {
-            locationInfo.innerText = "📍 Tüm istasyonlar listeleniyor";
-          }, { timeout: 5000 });
-        } else {
-          locationInfo.innerText = "📍 Konum servisi desteklenmiyor";
-        }
+        // Uygulama açılışında konumu otomatik istemeyi dene
+        requestLocationPermission();
 
       } catch (err) {
         statusDiv.innerText = "Bağlantı Hatası: " + err.message;
