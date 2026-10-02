@@ -80,8 +80,8 @@
       const cleanLng = parseFloat(lng);
 
       if (!isNaN(cleanLat) && !isNaN(cleanLng)) {
-        // Doğrudan Harita Navigasyonunu Başlatan Yönlendirme
-        window.location.href = `google.navigation:q=${cleanLat},${cleanLng}`;
+        // Universal Google Maps Yol Tarifi Bağlantısı
+        window.location.href = `https://www.google.com/maps/dir/?api=1&destination=${cleanLat},${cleanLng}`;
       } else {
         const query = encodeURIComponent(`${name || 'Akaryakıt'} ${district || ''} Afyonkarahisar`);
         window.location.href = `https://www.google.com/maps/search/?api=1&query=${query}`;
