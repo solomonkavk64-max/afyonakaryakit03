@@ -77,9 +77,8 @@
 
     function openNativeMap(lat, lng, name, district) {
       let geoUrl = '';
-      if (lat && lng) {
-        // Android Haritalar uygulamasını doğrudan başlatan yönlendirme (geo protocol)
-        geoUrl = `geo:${lat},${lng}?q=${lat},${lng}(${encodeURIComponent(name || 'Akaryakıt İstasyona')})`;
+      if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
+        geoUrl = `geo:${lat},${lng}?q=${lat},${lng}(${encodeURIComponent(name || 'Akaryakıt İstasyonu')})`;
       } else {
         const query = encodeURIComponent(`${name || 'Akaryakıt'} ${district || ''} Afyonkarahisar`);
         geoUrl = `geo:0,0?q=${query}`;
@@ -87,8 +86,9 @@
       window.location.href = geoUrl;
     }
 
+    // Haversine formülü ile hassas mesafe hesabı (km)
     function calculateDistance(lat1, lon1, lat2, lon2) {
-      const R = 6371;
+      const R = 6371; // Dünya yarıçapı
       const dLat = (lat2 - lat1) * Math.PI / 180;
       const dLon = (lon2 - lon1) * Math.PI / 180;
       const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
@@ -103,7 +103,9 @@
       container.innerHTML = '';
       
       stations.forEach(station => {
-        const distBadge = station.distance ? `<span class="distance-badge">📍 ${station.distance} km</span>` : '';
+        const distBadge = (station.distance !== undefined && !isNaN(station.distance)) 
+          ? `<span class="distance-badge">📍 ${station.distance} km</span>` 
+          : '';
         
         const card = `
           <div class="card">
@@ -138,7 +140,7 @@
       const permBtn = document.getElementById('grant-location-btn');
 
       if (navigator.geolocation) {
-        locationInfo.innerText = "📍 Konumunuz alınıyor...";
+        locationInfo.innerText = "📍 Anlık hassas konumunuz alınıyor...";
         navigator.geolocation.getCurrentPosition(
           (position) => {
             const userLat = position.coords.latitude;
@@ -148,12 +150,15 @@
 
             if (globalStationsData.length > 0) {
               const sortedStations = globalStationsData.map(station => {
-                if (station.latitude && station.longitude) {
-                  const dist = calculateDistance(userLat, userLng, parseFloat(station.latitude), parseFloat(station.longitude));
+                const stLat = parseFloat(station.latitude);
+                const stLng = parseFloat(station.longitude);
+
+                if (!isNaN(stLat) && !isNaN(stLng)) {
+                  const dist = calculateDistance(userLat, userLng, stLat, stLng);
                   return { ...station, distance: parseFloat(dist) };
                 }
-                return station;
-              }).sort((a, b) => (a.distance || 9999) - (b.distance || 9999));
+                return { ...station, distance: 99999 };
+              }).sort((a, b) => a.distance - b.distance);
 
               renderStations(sortedStations);
             }
@@ -162,11 +167,11 @@
             if (err.code === err.PERMISSION_DENIED) {
               locationInfo.innerText = "⚠️ Konum izni verilmedi. Cihaz ayarlarınızdan izin verin.";
             } else {
-              locationInfo.innerText = "⚠️ Konum alınamadı (GPS kapalı olabilir).";
+              locationInfo.innerText = "⚠️ GPS konumu alınamadı. Lütfen GPS'i açıp tekrar deneyin.";
             }
             permBtn.style.display = 'block';
           },
-          { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
         );
       } else {
         locationInfo.innerText = "📍 Tarayıcınız konum servisini desteklemiyor";
