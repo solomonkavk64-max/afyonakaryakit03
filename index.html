@@ -52,6 +52,8 @@
       font-size: 13px;
       font-weight: 600;
       cursor: pointer;
+      text-decoration: none;
+      box-sizing: border-box;
       transition: background 0.2s;
     }
     .map-btn:active { background: #3367d6; }
@@ -73,15 +75,16 @@
     const SUPABASE_KEY = 'sb_publishable_atDC1UU40N7N-U-c3u__4A_mKuI2Oum';
     let globalStationsData = [];
 
-    function openMap(lat, lng, name, district) {
-      let url = '';
+    function openNativeMap(lat, lng, name, district) {
+      let geoUrl = '';
       if (lat && lng) {
-        url = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+        // Android Haritalar uygulamasını doğrudan başlatan yönlendirme (geo protocol)
+        geoUrl = `geo:${lat},${lng}?q=${lat},${lng}(${encodeURIComponent(name || 'Akaryakıt İstasyona')})`;
       } else {
         const query = encodeURIComponent(`${name || 'Akaryakıt'} ${district || ''} Afyonkarahisar`);
-        url = `https://www.google.com/maps/search/?api=1&query=${query}`;
+        geoUrl = `geo:0,0?q=${query}`;
       }
-      window.open(url, '_blank');
+      window.location.href = geoUrl;
     }
 
     function calculateDistance(lat1, lon1, lat2, lon2) {
@@ -123,7 +126,7 @@
                 <span class="price-value">₺${station.lpg || '-'}</span>
               </div>
             </div>
-            <button onclick="openMap('${station.latitude}', '${station.longitude}', '${station.name}', '${station.district}')" class="map-btn">🗺️ Haritada Aç / Yol Tarifi</button>
+            <button onclick="openNativeMap('${station.latitude}', '${station.longitude}', '${station.name}', '${station.district}')" class="map-btn">🗺️ Haritada Aç / Yol Tarifi</button>
           </div>
         `;
         container.innerHTML += card;
