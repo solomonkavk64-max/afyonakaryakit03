@@ -80,11 +80,13 @@
       const cleanLng = parseFloat(lng);
 
       if (!isNaN(cleanLat) && !isNaN(cleanLng)) {
-        // Universal Google Maps Yol Tarifi Bağlantısı
-        window.location.href = `https://www.google.com/maps/dir/?api=1&destination=${cleanLat},${cleanLng}`;
+        // Android Google Haritalar uygulamasını doğrudan açan resmi Intent URL'i
+        const intentUrl = `intent://maps.google.com/maps?daddr=${cleanLat},${cleanLng}#Intent;scheme=https;package=com.google.android.apps.maps;end`;
+        window.location.href = intentUrl;
       } else {
         const query = encodeURIComponent(`${name || 'Akaryakıt'} ${district || ''} Afyonkarahisar`);
-        window.location.href = `https://www.google.com/maps/search/?api=1&query=${query}`;
+        const intentUrl = `intent://maps.google.com/maps?q=${query}#Intent;scheme=https;package=com.google.android.apps.maps;end`;
+        window.location.href = intentUrl;
       }
     }
 
@@ -217,3 +219,4 @@
   </script>
 </body>
 </html>
+
