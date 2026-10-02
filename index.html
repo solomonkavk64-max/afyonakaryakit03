@@ -76,19 +76,20 @@
     let globalStationsData = [];
 
     function openNativeMap(lat, lng, name, district) {
-      let geoUrl = '';
-      if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
-        geoUrl = `geo:${lat},${lng}?q=${lat},${lng}(${encodeURIComponent(name || 'Akaryakıt İstasyonu')})`;
+      const cleanLat = parseFloat(lat);
+      const cleanLng = parseFloat(lng);
+
+      if (!isNaN(cleanLat) && !isNaN(cleanLng)) {
+        // Doğrudan Harita Navigasyonunu Başlatan Yönlendirme
+        window.location.href = `google.navigation:q=${cleanLat},${cleanLng}`;
       } else {
         const query = encodeURIComponent(`${name || 'Akaryakıt'} ${district || ''} Afyonkarahisar`);
-        geoUrl = `geo:0,0?q=${query}`;
+        window.location.href = `https://www.google.com/maps/search/?api=1&query=${query}`;
       }
-      window.location.href = geoUrl;
     }
 
-    // Haversine formülü ile hassas mesafe hesabı (km)
     function calculateDistance(lat1, lon1, lat2, lon2) {
-      const R = 6371; // Dünya yarıçapı
+      const R = 6371;
       const dLat = (lat2 - lat1) * Math.PI / 180;
       const dLon = (lon2 - lon1) * Math.PI / 180;
       const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
@@ -103,7 +104,7 @@
       container.innerHTML = '';
       
       stations.forEach(station => {
-        const distBadge = (station.distance !== undefined && !isNaN(station.distance)) 
+        const distBadge = (station.distance !== undefined && !isNaN(station.distance) && station.distance !== 99999) 
           ? `<span class="distance-badge">📍 ${station.distance} km</span>` 
           : '';
         
@@ -140,7 +141,7 @@
       const permBtn = document.getElementById('grant-location-btn');
 
       if (navigator.geolocation) {
-        locationInfo.innerText = "📍 Anlık hassas konumunuz alınıyor...";
+        locationInfo.innerText = "📍 Anlık konum alınıyor...";
         navigator.geolocation.getCurrentPosition(
           (position) => {
             const userLat = position.coords.latitude;
@@ -167,7 +168,7 @@
             if (err.code === err.PERMISSION_DENIED) {
               locationInfo.innerText = "⚠️ Konum izni verilmedi. Cihaz ayarlarınızdan izin verin.";
             } else {
-              locationInfo.innerText = "⚠️ GPS konumu alınamadı. Lütfen GPS'i açıp tekrar deneyin.";
+              locationInfo.innerText = "⚠️ Konum alınamadı. Lütfen GPS'i açın.";
             }
             permBtn.style.display = 'block';
           },
