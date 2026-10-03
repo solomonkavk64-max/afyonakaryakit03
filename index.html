@@ -51,7 +51,6 @@
       border-radius: 8px;
       font-size: 13px;
       font-weight: 600;
-      cursor: pointer;
       text-decoration: none;
       box-sizing: border-box;
       transition: background 0.2s;
@@ -75,21 +74,6 @@
     const SUPABASE_KEY = 'sb_publishable_atDC1UU40N7N-U-c3u__4A_mKuI2Oum';
     let globalStationsData = [];
 
-    function openNativeMap(lat, lng, name, district) {
-      const cleanLat = parseFloat(lat);
-      const cleanLng = parseFloat(lng);
-
-      if (!isNaN(cleanLat) && !isNaN(cleanLng)) {
-        // Android Google Haritalar uygulamasını doğrudan açan resmi Intent URL'i
-        const intentUrl = `intent://maps.google.com/maps?daddr=${cleanLat},${cleanLng}#Intent;scheme=https;package=com.google.android.apps.maps;end`;
-        window.location.href = intentUrl;
-      } else {
-        const query = encodeURIComponent(`${name || 'Akaryakıt'} ${district || ''} Afyonkarahisar`);
-        const intentUrl = `intent://maps.google.com/maps?q=${query}#Intent;scheme=https;package=com.google.android.apps.maps;end`;
-        window.location.href = intentUrl;
-      }
-    }
-
     function calculateDistance(lat1, lon1, lat2, lon2) {
       const R = 6371;
       const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -109,6 +93,18 @@
         const distBadge = (station.distance !== undefined && !isNaN(station.distance) && station.distance !== 99999) 
           ? `<span class="distance-badge">📍 ${station.distance} km</span>` 
           : '';
+
+        const cleanLat = parseFloat(station.latitude);
+        const cleanLng = parseFloat(station.longitude);
+        
+        let mapUrl = '';
+        if (!isNaN(cleanLat) && !isNaN(cleanLng)) {
+          // Doğrudan o koordinata yol tarifi başlatan Google Maps resmi URL'i
+          mapUrl = `https://www.google.com/maps/dir/?api=1&destination=${cleanLat},${cleanLng}`;
+        } else {
+          const query = encodeURIComponent(`${station.name || 'Akaryakıt'} ${station.district || ''} Afyonkarahisar`);
+          mapUrl = `https://www.google.com/maps/search/?api=1&query=${query}`;
+        }
         
         const card = `
           <div class="card">
@@ -131,7 +127,7 @@
                 <span class="price-value">₺${station.lpg || '-'}</span>
               </div>
             </div>
-            <button onclick="openNativeMap('${station.latitude}', '${station.longitude}', '${station.name}', '${station.district}')" class="map-btn">🗺️ Haritada Aç / Yol Tarifi</button>
+            <a href="${mapUrl}" class="map-btn">🗺️ Haritada Aç / Yol Tarifi</a>
           </div>
         `;
         container.innerHTML += card;
