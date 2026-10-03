@@ -102,14 +102,14 @@
 </head>
 <body>
 
-    <header>⛽ En Yakın Akaryakıt İstasyonları</header>
+    <header>⛽ Yakındaki Akaryakıt İstasyonları</header>
     
     <!-- HARİTA GÖRSELİ -->
     <div id="map"></div>
 
     <div class="container" id="stations-list">
         <p style="text-align:center; color:#666; margin-top: 20px;">
-            📍 Konumunuz tespit ediliyor, en yakın istasyonlar hesaplanıyor...
+            📍 GPS Konumunuz tespit ediliyor...
         </p>
     </div>
 
@@ -123,8 +123,8 @@
         
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        let userLat = 39.9334; // Varsayılan Başlangıç (GPS açılınca anında güncellenir)
-        let userLng = 32.8597;
+        let userLat = 38.7569; 
+        let userLng = 30.5387;
 
         // Harita Başlatma
         const map = L.map('map').setView([userLat, userLng], 12);
@@ -134,7 +134,7 @@
             attribution: 'Map &copy; Esri'
         }).addTo(map);
 
-        // Haversine Mesafesi Hesaplama (KM)
+        // İki koordinat arası km hesaplama
         function getDistanceInKm(lat1, lon1, lat2, lon2) {
             const R = 6371; 
             const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -146,16 +146,15 @@
             return R * c;
         }
 
-        // Doğrudan Google Haritalar Rota Başlatıcı (Native Intent)
-        function startGoogleMapsNavigation(lat, lng) {
-            const isAndroid = /Android/i.test(navigator.userAgent);
-            
-            if (isAndroid) {
-                // Play Store'a düşmeden direkt Google Haritalar uygulamasını rota modunda açar
-                window.location.href = `intent://maps.google.com/maps?daddr=${lat},${lng}#Intent;scheme=https;package=com.google.android.apps.maps;action=android.intent.action.VIEW;end`;
+        // Doğrudan Google Haritalar Rota Açıcı (Play Store'a düşmeyi engeller)
+        function startGoogleMapsNavigation(lat, lng, name) {
+            let mapsUrl = "";
+            if (lat && lng) {
+                mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
             } else {
-                window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, '_blank');
+                mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name + ' Akaryakıt İstasyonu')}`;
             }
+            window.location.href = mapsUrl;
         }
 
         async function fetchAndDisplayStations() {
@@ -174,29 +173,31 @@
                 st.distance = getDistanceInKm(userLat, userLng, lat, lng);
             });
 
-            // Sizin konumunuza EN YAKIN olandan EN UZAĞA doğru sırala
+            // Konumunuza EN YAKIN olandan EN UZAĞA doğru sırala
             stations.sort((a, b) => a.distance - b.distance);
 
             listContainer.innerHTML = '';
 
             stations.forEach(st => {
-                const lat = st.latitude || userLat;
-                const lng = st.longitude || userLng;
+                const lat = st.latitude;
+                const lng = st.longitude;
                 const name = st.name || 'Akaryakıt İstasyonu';
                 const distFormatted = st.distance < 1 ? 
                     `${Math.round(st.distance * 1000)} m` : 
                     `${st.distance.toFixed(1)} km`;
 
                 // Haritaya Pin Ekle
-                const marker = L.marker([lat, lng]).addTo(map);
-                marker.bindPopup(`
-                    <b>${name}</b><br>
-                    Mesafe: <b>${distFormatted}</b><br>
-                    Benzin: ₺${st.benzin || '-'}<br>
-                    <button onclick="startGoogleMapsNavigation(${lat}, ${lng})" style="margin-top:6px; background:#2e7d32; color:white; border:none; padding:6px 12px; border-radius:4px; width:100%;">
-                        🚀 Rota Çiz
-                    </button>
-                `);
+                if (lat && lng) {
+                    const marker = L.marker([lat, lng]).addTo(map);
+                    marker.bindPopup(`
+                        <b>${name}</b><br>
+                        Mesafe: <b>${distFormatted}</b><br>
+                        Benzin: ₺${st.benzin || '-'}<br>
+                        <button onclick="startGoogleMapsNavigation(${lat}, ${lng}, '${name}')" style="margin-top:6px; background:#2e7d32; color:white; border:none; padding:6px 12px; border-radius:4px; width:100%; cursor:pointer;">
+                            🚀 Rota Çiz
+                        </button>
+                    `);
+                }
 
                 // Kart Oluştur
                 const card = document.createElement('div');
@@ -212,7 +213,7 @@
                         <div class="price-item"><div class="price-title">MOTORİN</div><div class="price-val">₺${st.motorin || '-'}</div></div>
                         <div class="price-item"><div class="price-title">LPG</div><div class="price-val">₺${st.lpg || '-'}</div></div>
                     </div>
-                    <button class="nav-btn" onclick="startGoogleMapsNavigation(${lat}, ${lng})">
+                    <button class="nav-btn" onclick="startGoogleMapsNavigation(${lat}, ${lng}, '${name}')">
                        🚀 Google Haritalar'da Rota Başlat
                     </button>
                 `;
@@ -220,7 +221,7 @@
             });
         }
 
-        // GPS Konumunu Al ve Haritayı Oraya Taşı
+        // GPS Konumunu Al
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (pos) => {
@@ -229,7 +230,7 @@
                     
                     map.setView([userLat, userLng], 13);
                     
-                    // Kullanıcının kendi konumuna mavi çember koy
+                    // Kullanıcının konumunu mavi çember ile göster
                     L.circle([userLat, userLng], {
                         color: '#1976d2',
                         fillColor: '#2196f3',
@@ -240,7 +241,7 @@
                     fetchAndDisplayStations();
                 },
                 (err) => {
-                    console.warn("GPS Erişimi Verilmedi. Varsayılan konum kullanılıyor.");
+                    console.warn("GPS izni verilmedi.");
                     fetchAndDisplayStations();
                 },
                 { enableHighAccuracy: true, timeout: 10000 }
