@@ -104,20 +104,18 @@
         // Haritayı Afyonkarahisar merkezli başlat
         const map = L.map('map').setView([38.7569, 30.5387], 12);
 
-        // Engellenmeyen Harita Katmanı (CartoDB Voyager)
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; OpenStreetMap &copy; CARTO',
-            subdomains: 'abcd',
-            maxZoom: 19
+        // API Key Gerektirmeyen Tamamen Ücretsiz ESRI Harita Katmanı
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri'
         }).addTo(map);
 
-        // Doğrudan Telefonun Navigasyon Uygulamasını Açan Fonksiyon
+        // Doğrudan Uygulamayı Açan Yol Tarifi Fonksiyonu
         function openNativeMaps(lat, lng) {
             const isAndroid = /Android/i.test(navigator.userAgent);
             
             if (isAndroid) {
-                // Android'de doğrudan Harita / Navigasyon uygulamasını başlatır (Play Store'a atmaz)
-                window.location.href = `google.navigation:q=${lat},${lng}`;
+                // Play Store'a gitmeden doğrudan Google Haritalar uygulamasında rotayı açar
+                window.location.href = `intent://maps.google.com/maps?daddr=${lat},${lng}#Intent;scheme=https;package=com.google.android.apps.maps;action=android.intent.action.VIEW;end`;
             } else {
                 window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, '_blank');
             }
@@ -147,7 +145,7 @@
 
                 // Haritaya Pin Ekle
                 const marker = L.marker([lat, lng]).addTo(map);
-                marker.bindPopup(`<b>${name}</b><br>Benzin: ₺${station.benzin || '-'}<br><button onclick="openNativeMaps(${lat}, ${lng})" style="margin-top:5px; background:#388e3c; color:white; border:none; padding:5px 10px; border-radius:3px;">Yol Tarifi Al</button>`);
+                marker.bindPopup(`<b>${name}</b><br>Benzin: ₺${station.benzin || '-'}<br><button onclick="openNativeMaps(${lat}, ${lng})" style="margin-top:5px; background:#388e3c; color:white; border:none; padding:5px 10px; border-radius:3px; cursor:pointer;">Yol Tarifi Al</button>`);
 
                 // Liste Kartı Oluştur
                 const card = document.createElement('div');
