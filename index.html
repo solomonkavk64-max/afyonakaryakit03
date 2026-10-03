@@ -31,19 +31,15 @@
         .container {
             padding: 12px;
         }
-        .gps-btn {
-            display: block;
-            width: 100%;
-            background-color: #1976d2;
-            color: white;
-            padding: 14px;
-            border: none;
+        .gps-status-box {
+            background-color: #e3f2fd;
+            color: #1565c0;
+            padding: 12px;
             border-radius: 8px;
-            font-size: 16px;
+            text-align: center;
             font-weight: bold;
-            cursor: pointer;
             margin-bottom: 12px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            font-size: 14px;
         }
         .station-card {
             background: white;
@@ -116,11 +112,11 @@
     <div id="map"></div>
 
     <div class="container">
-        <button class="gps-btn" onclick="requestUserLocation()">📍 Konumumu Al ve İstasyonları Bul</button>
+        <div id="gps-status" class="gps-status-box">🔄 Canlı GPS konumu bekleniyor...</div>
         
         <div id="stations-list">
-            <p style="text-align:center; color:#666; margin-top: 20px;">
-                Lütfen yukarıdaki butona tıklayarak konumunuza izin verin.
+            <p style="text-align:center; color:#666; margin-top: 10px;">
+                Konumunuz alındığında en yakın istasyonlar otomatik listelenecektir.
             </p>
         </div>
     </div>
@@ -139,59 +135,70 @@
         let userMarker = null;
         let stationMarkers = [];
         let dovizPrices = {};
+        let isFirstLocation = true;
+        let watchId = null;
 
-        // Sayfa açıldığında varsayılan haritayı oluştur
         window.onload = async function() {
             await fetchPrices();
-            initMap(38.7569, 30.5387); // Başlangıç konumu
+            initMap(38.7569, 30.5387); // Varsayılan başlangıç
+            startLiveLocationTracking();
         };
 
         function initMap(lat, lng) {
             if (!map) {
-                map = L.map('map').setView([lat, lng], 12);
+                map = L.map('map').setView([lat, lng], 14);
                 L.tileLayer('https://core-renderer-tiles.maps.yandex.net/tiles?l=map&v=21.06.18-0&x={x}&y={y}&z={z}&scale=1&lang=tr_TR', {
                     maxZoom: 19,
                     attribution: '&copy; Yandex'
                 }).addTo(map);
-            } else {
-                map.setView([lat, lng], 13);
             }
 
             if (userMarker) {
                 userMarker.setLatLng([lat, lng]);
             } else {
                 userMarker = L.circleMarker([lat, lng], {
-                    radius: 9,
+                    radius: 10,
                     fillColor: "#1976d2",
                     color: "#fff",
                     weight: 3,
                     opacity: 1,
                     fillOpacity: 0.9
-                }).addTo(map).bindPopup("Konumunuz");
+                }).addTo(map).bindPopup("Canlı Konumunuz");
             }
         }
 
-        function requestUserLocation() {
-            const listContainer = document.getElementById('stations-list');
-            listContainer.innerHTML = '<p style="text-align:center; color:#1976d2; font-weight:bold;">GPS konumu alınıyor, lütfen bekleyin...</p>';
+        function startLiveLocationTracking() {
+            const statusBox = document.getElementById('gps-status');
 
             if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
+                // watchPosition ile hareket ettikçe anlık tetiklenir
+                watchId = navigator.geolocation.watchPosition(
                     async (position) => {
                         const lat = position.coords.latitude;
                         const lng = position.coords.longitude;
                         
+                        statusBox.innerHTML = `✅ Canlı Konum Aktif (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+                        
                         initMap(lat, lng);
-                        await loadStations(lat, lng);
+                        
+                        if (isFirstLocation) {
+                            map.setView([lat, lng], 15);
+                            await loadStations(lat, lng);
+                            isFirstLocation = false;
+                        }
                     },
                     (error) => {
                         console.warn("GPS hatası:", error);
-                        listContainer.innerHTML = '<p style="text-align:center; color:#d32f2f;">Konum alınamadı! Lütfen telefonunuzun konum izinlerini ve GPS servisinin açık olduğundan emin olun.</p>';
+                        statusBox.innerHTML = "⚠️ Konum alınamadı! Lütfen GPS ve uygulama izinlerini kontrol edin.";
                     },
-                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                    { 
+                        enableHighAccuracy: true, 
+                        timeout: 20000, 
+                        maximumAge: 0 // Eski önbelleğe alınmış konumu reddeder, anlık GPS ister
+                    }
                 );
             } else {
-                listContainer.innerHTML = '<p style="text-align:center; color:#d32f2f;">Tarayıcınız konum servislerini desteklemiyor.</p>';
+                statusBox.innerHTML = "Cihazınız canlı konumu desteklemiyor.";
             }
         }
 
@@ -211,24 +218,35 @@
         }
 
         async function fetchNearbyStations(lat, lng) {
-            const radius = 30000; // 30 km
+            const radius = 50000; 
             const query = `
-                [out:json][timeout:20];
+                [out:json][timeout:25];
                 (
                   node["amenity"="fuel"](around:${radius},${lat},${lng});
                   way["amenity"="fuel"](around:${radius},${lat},${lng});
+                  node["shop"="fuel"](around:${radius},${lat},${lng});
                 );
                 out center;
             `;
             
-            try {
-                const response = await fetch("https://overpass.kumi.systems/api/interpreter?data=" + encodeURIComponent(query));
-                if (response.ok) {
-                    const data = await response.json();
-                    return data.elements || [];
+            const endpoints = [
+                "https://overpass-api.de/api/interpreter",
+                "https://overpass.kumi.systems/api/interpreter",
+                "https://maps.mail.ru/osm/tools/overpass/api/interpreter"
+            ];
+
+            for (let ep of endpoints) {
+                try {
+                    const response = await fetch(ep + "?data=" + encodeURIComponent(query));
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.elements && data.elements.length > 0) {
+                            return data.elements;
+                        }
+                    }
+                } catch (e) {
+                    console.warn(ep + " yanıt vermedi.");
                 }
-            } catch (e) {
-                console.warn("Overpass hatası:", e);
             }
             return [];
         }
@@ -251,21 +269,42 @@
             const listContainer = document.getElementById('stations-list');
             listContainer.innerHTML = '<p style="text-align:center; color:#666;">Yakındaki akaryakıt istasyonları taranıyor...</p>';
 
-            const elements = await fetchNearbyStations(lat, lng);
+            let elements = await fetchNearbyStations(lat, lng);
+
+            if (!elements || elements.length === 0) {
+                listContainer.innerHTML = '<p style="text-align:center; color:#d32f2f;">Harita sunucusundan istasyon alınamadı. Supabase fiyat listesinden gösteriliyor:</p>';
+                
+                for (let brand in dovizPrices) {
+                    const pr = dovizPrices[brand];
+                    const card = document.createElement('div');
+                    card.className = 'station-card';
+                    card.innerHTML = `
+                        <div class="station-header">
+                            <div class="station-name">${brand} Akaryakıt İstasyonu</div>
+                            <div class="distance-tag">📍 Yakında</div>
+                        </div>
+                        <div class="prices">
+                            <div class="price-item"><div class="price-title">BENZİN</div><div class="price-val">₺${pr.benzin || '-'}</div></div>
+                            <div class="price-item"><div class="price-title">MOTORİN</div><div class="price-val">₺${pr.motorin || '-'}</div></div>
+                            <div class="price-item"><div class="price-title">LPG</div><div class="price-val">₺${pr.lpg || '-'}</div></div>
+                        </div>
+                        <button class="nav-btn" onclick="startYandexNav(${lat}, ${lng})">
+                           🚀 Yandex ile Rota Başlat
+                        </button>
+                    `;
+                    listContainer.appendChild(card);
+                }
+                return;
+            }
 
             stationMarkers.forEach(m => map.removeLayer(m));
             stationMarkers = [];
-
-            if (!elements || elements.length === 0) {
-                listContainer.innerHTML = '<p style="text-align:center; color:#666;">Yakınınızda akaryakıt istasyonu bulunamadı.</p>';
-                return;
-            }
 
             let stations = elements.map(item => {
                 const stLat = item.lat || (item.center && item.center.lat);
                 const stLng = item.lon || (item.center && item.center.lon);
                 const stName = (item.tags && (item.tags.brand || item.tags.name)) || "Akaryakıt İstasyonu";
-                const dist = getDistanceInKm(lat, lng, stLat, stLng);
+                const dist = getDistanceInKm(lat, lon, stLat, stLng);
 
                 let matchedPrice = { benzin: '84.60', motorin: '95.00', lpg: '41.96' };
                 const upperName = stName.toUpperCase();
