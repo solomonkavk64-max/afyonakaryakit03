@@ -4,32 +4,32 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Akaryakıt Bulucu</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         body { font-family: sans-serif; margin: 0; padding: 0; background: #f4f6f9; }
-        header { background: #1976d2; color: white; padding: 14px; text-align: center; font-weight: bold; }
-        #map { height: 250px; width: 100%; }
-        .container { padding: 12px; }
-        .gps-btn { width: 100%; background: #d32f2f; color: white; padding: 14px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .status { text-align: center; font-size: 13px; font-weight: bold; margin-bottom: 10px; color: #333; }
-        .card { background: white; border-radius: 10px; padding: 14px; margin-bottom: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .prices { display: flex; justify-content: space-around; background: #f8f9fa; padding: 8px; border-radius: 6px; margin-top: 8px; }
+        header { background: #1976d2; color: white; padding: 16px; text-align: center; font-weight: bold; font-size: 18px; }
+        .container { padding: 14px; max-width: 600px; margin: auto; }
+        .gps-btn { width: 100%; background: #d32f2f; color: white; padding: 16px; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .status { text-align: center; font-size: 14px; font-weight: bold; margin-bottom: 15px; color: #333; background: #fff; padding: 10px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .card { background: white; border-radius: 12px; padding: 16px; margin-bottom: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+        .station-title { font-size: 16px; font-weight: bold; color: #1976d2; margin-bottom: 8px; }
+        .prices { display: flex; justify-content: space-around; background: #f8f9fa; padding: 10px; border-radius: 8px; margin-top: 10px; font-size: 14px; }
         .price-val { font-weight: bold; color: #d32f2f; }
-        .nav-btn { display: block; width: 100%; background: #2e7d32; color: white; padding: 10px; text-align: center; border-radius: 6px; text-decoration: none; font-weight: bold; margin-top: 10px; }
+        .nav-buttons { display: flex; gap: 8px; margin-top: 12px; }
+        .nav-btn { flex: 1; display: block; padding: 12px; text-align: center; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 14px; color: white; }
+        .google-nav { background: #1a73e8; }
+        .yandex-nav { background: #cb112abf; }
     </style>
 </head>
 <body>
 
     <header>⛽ Akaryakıt İstasyonları</header>
-    <div id="map"></div>
 
     <div class="container">
-        <button class="gps-btn" onclick="getLocation()">📍 Konumu Al ve Güncelle</button>
-        <div id="status" class="status">Konum bekleniyor...</div>
+        <button class="gps-btn" onclick="getLocation()">📍 Konumumu Al ve Fiyatları Getir</button>
+        <div id="status" class="status">Konum bekleniyor... Lütfen butona basın.</div>
         <div id="list"></div>
     </div>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <script>
@@ -38,61 +38,41 @@
             "sb_publishable_atDC1UU40N7N-U-c3u__4A_mKuI2Oum"
         );
 
-        let map = null;
-        let marker = null;
+        let currentLat = 38.7569; // Varsayılan enlem
+        let currentLng = 30.5387; // Varsayılan boylam
 
         window.onload = function() {
-            initMap(38.7569, 30.5387);
             getLocation();
         };
 
-        function initMap(lat, lng) {
-            if (!map) {
-                map = L.map('map').setView([lat, lng], 15);
-                // Kesinlikle anahtar istemeyen resmi ve ücretsiz OSM katmanı
-                L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    maxZoom: 19,
-                    attribution: '&copy; OpenStreetMap'
-                }).addTo(map);
-            } else {
-                map.setView([lat, lng], 16);
-            }
-
-            if (marker) {
-                marker.setLatLng([lat, lng]);
-            } else {
-                marker = L.marker([lat, lng]).addTo(map).bindPopup("Konumunuz");
-            }
-        }
-
         function getLocation() {
             const status = document.getElementById('status');
-            status.innerHTML = "Konum alınıyor...";
+            status.innerHTML = "GPS uydularından konum alınıyor...";
             
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
                     (pos) => {
-                        const lat = pos.coords.latitude;
-                        const lng = pos.coords.longitude;
-                        status.innerHTML = `✅ Konum Güncellendi: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+                        currentLat = pos.coords.latitude;
+                        currentLng = pos.coords.longitude;
+                        status.innerHTML = `✅ Konum Alındı: ${currentLat.toFixed(4)}, ${currentLng.toFixed(4)}`;
                         status.style.color = "#2e7d32";
                         
-                        initMap(lat, lng);
-                        loadPrices(lat, lng);
+                        loadPrices();
                     },
                     (err) => {
-                        status.innerHTML = "⚠️ Konum alınamadı, varsayılan merkez kullanılıyor.";
+                        status.innerHTML = "⚠️ Konum alınamadı. Varsayılan konum kullanılıyor.";
                         status.style.color = "#d32f2f";
-                        loadPrices(38.7569, 30.5387);
+                        loadPrices();
                     },
-                    { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
+                    { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
                 );
             } else {
                 status.innerHTML = "Cihazınız konum desteklemiyor.";
+                loadPrices();
             }
         }
 
-        async function loadPrices(lat, lng) {
+        async function loadPrices() {
             const list = document.getElementById('list');
             list.innerHTML = "Fiyatlar yükleniyor...";
 
@@ -104,15 +84,23 @@
 
                 if (data && data.length > 0) {
                     data.forEach(item => {
+                        const brandName = item.brand || 'İstasyon';
+                        // Google Maps ve Yandex Navigasyon yönlendirme linkleri
+                        const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${currentLat},${currentLng}`;
+                        const yandexNavUrl = `https://yandex.com.tr/harita/?rtext=~${currentLat},${currentLng}&rtt=auto`;
+
                         list.innerHTML += `
                             <div class="card">
-                                <b>${item.brand || 'İstasyon'}</b>
+                                <div class="station-title">⛽ ${brandName}</div>
                                 <div class="prices">
                                     <div>Benzin: <span class="price-val">₺${item.benzin || '-'}</span></div>
                                     <div>Motorin: <span class="price-val">₺${item.motorin || '-'}</span></div>
                                     <div>LPG: <span class="price-val">₺${item.lpg || '-'}</span></div>
                                 </div>
-                                <a class="nav-btn" href="https://yandex.com.tr/harita/?rtext=~${lat},${lng}&rtt=auto" target="_blank">🚀 Yandex ile Rota Başlat</a>
+                                <div class="nav-buttons">
+                                    <a class="nav-btn google-nav" href="${googleMapsUrl}" target="_blank">🗺️️ Google Haritalar</a>
+                                    <a class="nav-btn yandex-nav" href="${yandexNavUrl}" target="_blank">🚗 Yandex Navigasyon</a>
+                                </div>
                             </div>
                         `;
                     });
