@@ -77,11 +77,11 @@
             { brand: "Sanoil", benzin: "86.80", motorin: "97.40", lpg: "-", lat: 38.7585, lng: 30.5305 }
         ];
 
-        // Harita katmanı engellenmeyen güvenli CartoDB altyapısına güncellendi
+        // 403 Kesin Çözümü: Alternatif kararlı harita sağlayıcısı (Esri World Street Map)
         let map = L.map('map').setView([38.7569, 30.5387], 13);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
             maxZoom: 19,
-            attribution: '© OpenStreetMap contributors & CARTO'
+            attribution: 'Tiles &copy; Esri'
         }).addTo(map);
 
         let userMarker = null;
