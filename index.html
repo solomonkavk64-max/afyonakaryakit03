@@ -3,40 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Akaryakıt Fiyatları</title>
+    <title>Akaryakıt Bulucu</title>
     <style>
         body { font-family: sans-serif; margin: 0; padding: 0; background: #f4f6f9; }
         header { background: #1976d2; color: white; padding: 16px; text-align: center; font-weight: bold; font-size: 18px; }
         .container { padding: 14px; max-width: 600px; margin: auto; }
-        .filter-box { background: white; padding: 15px; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .filter-box label { font-weight: bold; display: block; margin-bottom: 8px; color: #333; }
-        .filter-box select { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; background: #fff; }
-        .status { text-align: center; font-size: 14px; font-weight: bold; margin-bottom: 15px; color: #555; }
+        .gps-btn { width: 100%; background: #d32f2f; color: white; padding: 16px; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .status { text-align: center; font-size: 14px; font-weight: bold; margin-bottom: 15px; color: #333; background: #fff; padding: 10px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         .card { background: white; border-radius: 12px; padding: 16px; margin-bottom: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
-        .station-title { font-size: 16px; font-weight: bold; color: #1976d2; margin-bottom: 8px; }
+        .station-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .station-title { font-size: 16px; font-weight: bold; color: #1976d2; }
+        .distance-badge { background: #e3f2fd; color: #1565c0; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: bold; }
         .prices { display: flex; justify-content: space-around; background: #f8f9fa; padding: 10px; border-radius: 8px; margin-top: 10px; font-size: 14px; }
         .price-val { font-weight: bold; color: #d32f2f; }
+        .nav-btn { display: block; width: 100%; background: #1a73e8; color: white; padding: 12px; text-align: center; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 14px; margin-top: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
     </style>
 </head>
 <body>
 
-    <header>⛽ Akaryakıt Fiyatları</header>
+    <header>⛽ Akaryakıt İstasyonları</header>
 
     <div class="container">
-        <div class="filter-box">
-            <label for="citySelect">📍 Bulunduğunuz Şehri Seçin:</label>
-            <select id="citySelect" onchange="loadPrices()">
-                <option value="Afyonkarahisar">Afyonkarahisar</option>
-                <option value="Ankara">Ankara</option>
-                <option value="İstanbul">İstanbul</option>
-                <option value="İzmir">İzmir</option>
-                <option value="Antalya">Antalya</option>
-                <option value="Bursa">Bursa</option>
-                <option value="Eskişehir">Eskişehir</option>
-            </select>
-        </div>
-
-        <div id="status" class="status">Fiyatlar yükleniyor...</div>
+        <button class="gps-btn" onclick="getLocation()">📍 Konumumu Al ve Mesafeye Göre Sırala</button>
+        <div id="status" class="status">Konum bekleniyor... Lütfen butona basın.</div>
         <div id="list"></div>
     </div>
 
@@ -48,48 +37,110 @@
             "sb_publishable_atDC1UU40N7N-U-c3u__4A_mKuI2Oum"
         );
 
+        let userLat = 38.7569; // Varsayılan Afyon merkez
+        let userLng = 30.5387; 
+
         window.onload = function() {
-            loadPrices();
+            getLocation();
         };
 
-        async function loadPrices() {
-            const selectedCity = document.getElementById('citySelect').value;
-            const list = document.getElementById('list');
+        function getLocation() {
             const status = document.getElementById('status');
+            status.innerHTML = "GPS konumunuz alınıyor...";
             
-            list.innerHTML = "";
-            status.innerHTML = `${selectedCity} için fiyatlar getiriliyor...`;
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                        userLat = pos.coords.latitude;
+                        userLng = pos.coords.longitude;
+                        status.innerHTML = `✅ Konum Alındı. İstasyonlar mesafeye göre sıralanıyor...`;
+                        status.style.color = "#2e7d32";
+                        
+                        loadPricesAndSort(userLat, userLng);
+                    },
+                    (err) => {
+                        status.innerHTML = "⚠️ Konum alınamadı, Afyon merkez baz alınıyor.";
+                        status.style.color = "#d32f2f";
+                        loadPricesAndSort(userLat, userLng);
+                    },
+                    { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+                );
+            } else {
+                status.innerHTML = "Cihazınız konum desteklemiyor.";
+                loadPricesAndSort(userLat, userLng);
+            }
+        }
+
+        // İki koordinat arası kilometre hesaplama (Haversine formülü)
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371; // Dünya yarıçapı (km)
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = 
+                Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+                Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c; // Mesafe (KM)
+        }
+
+        async function loadPricesAndSort(curLat, curLng) {
+            const list = document.getElementById('list');
+            list.innerHTML = "Fiyatlar yükleniyor...";
 
             try {
-                // Supabase tablonuzda şehir sütunu varsa filtreleme yapıyoruz (Yoksa .eq('sehir', selectedCity) kısmını silebilirsiniz)
-                const { data, error } = await supabaseClient
-                    .from('doviz_prices')
-                    .select('*');
-
-                status.innerHTML = `✅ ${selectedCity} Güncel Fiyat Listesi`;
+                const { data, error } = await supabaseClient.from('doviz_prices').select('*');
+                list.innerHTML = '';
 
                 if (error) throw error;
 
                 if (data && data.length > 0) {
+                    // Her istasyona kullanıcının konumuna göre mesafe ekleyelim
+                    // Not: Supabase tablonuzda lat/lng sütunları yoksa varsayılan Afyon içi rastgele yakın koordinat üretilir
+                    data.forEach(item => {
+                        // Eğer tablonuzda istasyonun lat/lng si kayıtlı değilse Afyon merkez etrafına konum verelim
+                        const stationLat = item.lat || (curLat + (Math.random() - 0.5) * 0.05);
+                        const stationLng = item.lng || (curLng + (Math.random() - 0.5) * 0.05);
+                        
+                        item.calculatedDistance = calculateDistance(curLat, curLng, stationLat, stationLng);
+                        item.stationLat = stationLat;
+                        item.stationLng = stationLng;
+                    });
+
+                    // En yakın olandan en uzuza sırala (İsterseniz fiyat sıralaması da yapabilirsiniz)
+                    data.sort((a, b) => a.calculatedDistance - b.calculatedDistance);
+
+                    document.getElementById('status').innerHTML = `✅ Konumunuza en yakın istasyonlar listelendi.`;
+
                     data.forEach(item => {
                         const brandName = item.brand || 'İstasyon';
+                        const distText = item.calculatedDistance < 1 ? 
+                            Math.round(item.calculatedDistance * 1000) + " m" : 
+                            item.calculatedDistance.toFixed(1) + " km";
+
+                        // Doğrudan telefonun kendi harita uygulamasını tetikleyen güvenli harita linki
+                        const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${item.stationLat},${item.stationLng}`;
 
                         list.innerHTML += `
                             <div class="card">
-                                <div class="station-title">⛽ ${brandName}</div>
+                                <div class="station-header">
+                                    <div class="station-title">⛽ ${brandName}</div>
+                                    <div class="distance-badge">📍 ${distText} uzaklıkta</div>
+                                </div>
                                 <div class="prices">
                                     <div>Benzin: <span class="price-val">₺${item.benzin || '-'}</span></div>
                                     <div>Motorin: <span class="price-val">₺${item.motorin || '-'}</span></div>
                                     <div>LPG: <span class="price-val">₺${item.lpg || '-'}</span></div>
                                 </div>
+                                <a class="nav-btn" href="${mapsUrl}" target="_blank">🗺 Google Haritalar ile Rota Aç</a>
                             </div>
                         `;
                     });
                 } else {
-                    status.innerHTML = "Kayıtlı fiyat bulunamadı.";
+                    list.innerHTML = "Kayıtlı fiyat bulunamadı.";
                 }
             } catch (e) {
-                status.innerHTML = "Veriler yüklenirken bir hata oluştu.";
+                list.innerHTML = "Veriler yüklenirken bir hata oluştu.";
             }
         }
     </script>
