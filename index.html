@@ -146,9 +146,7 @@
 
         window.onload = async function() {
             await fetchPrices();
-            // Başlangıç haritası (Afyonkarahisar merkez)
             initMap(38.7569, 30.5387);
-            // Otomatik konum çekmeyi dene
             forceGetLocation();
         };
 
@@ -196,10 +194,8 @@
                     },
                     (error) => {
                         console.warn("GPS Hatası:", error);
-                        statusEl.innerHTML = "⚠️ Konum alınamadı! Lütfen telefonunuzun GPS ve Uygulama Konum İzinlerini açık olduğundan emin olun.";
+                        statusEl.innerHTML = "⚠️ Konum alınamadı! Lütfen telefonunuzun GPS ve Uygulama Konum İzinlerini kontrol edin.";
                         statusEl.style.color = "#d32f2f";
-                        
-                        // Hata alsa bile mevcut veritabanı fiyatlarını göster
                         loadStations(38.7569, 30.5387);
                     },
                     { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
@@ -277,7 +273,6 @@
 
             let elements = await fetchNearbyStations(lat, lng);
 
-            // Eğer harita servisi boş dönerse Supabase'deki kayıtlı markaları listele (Kullanıcı boş ekran görmez)
             if (!elements || elements.length === 0) {
                 listContainer.innerHTML = '<p style="text-align:center; color:#e65100; font-size:13px; font-weight:bold;">Harita üzerinden istasyon noktası alınamadı. Güncel Akaryakıt Fiyatları:</p>';
                 
