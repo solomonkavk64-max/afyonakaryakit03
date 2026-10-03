@@ -4,10 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Canlı Akaryakıt Bulucu</title>
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#1976d2">
     
-    <!-- Leaflet Harita CSS -->
+    <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
     <style>
@@ -104,13 +102,14 @@
     <div id="map"></div>
 
     <div class="container" id="stations-list">
-        <p style="text-align:center; color:#666; margin-top: 20px;">
-            📍 Konumunuz taranıyor ve istasyonlar yükleniyor...
+        <p style="text-align:center; color:#666; margin-top: 20px;" id="status-text">
+            📍 Konum alınıyor ve istasyonlar taranıyor...
         </p>
     </div>
 
-    <!-- Leaflet & Supabase JS -->
+    <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Supabase JS -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <script>
@@ -118,19 +117,10 @@
         const SUPABASE_KEY = "sb_publishable_atDC1UU40N7N-U-c3u__4A_mKuI2Oum";
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+        let map;
         let userLat = 38.7569;
         let userLng = 30.5387;
         let dovizPrices = {};
-
-        // Haritayı Oluştur
-        const map = L.map('map').setView([userLat, userLng], 13);
-
-        // 403 Hatası Vermeyen Güvenli Harita Katmanı (CartoDB Basemaps)
-        L.tileLayer('https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-            maxZoom: 19,
-            subdomains: 'abcd',
-            attribution: '&copy; OpenStreetMap &copy; CARTO'
-        }).addTo(map);
 
         function getDistanceInKm(lat1, lon1, lat2, lon2) {
             const R = 6371; 
@@ -142,8 +132,8 @@
             return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
         }
 
-        function startGoogleMapsNavigation(lat, lng) {
-            window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, '_blank');
+        function startYandexNav(lat, lng) {
+            window.open(`https://yandex.com.tr/harita/?rtext=~${lat},${lng}&rtt=auto`, '_blank');
         }
 
         async function fetchPrices() {
@@ -157,110 +147,137 @@
                     });
                 }
             } catch (e) {
-                console.warn("Fiyat çekme uyarısı:", e);
+                console.warn("Fiyatlar çekilemedi:", e);
             }
         }
 
-        async function fetchNearbyStationsLive(lat, lng) {
-            const listContainer = document.getElementById('stations-list');
-            await fetchPrices();
-
-            const query = `[out:json][timeout:10];(node["amenity"="fuel"](around:10000,${lat},${lng});way["amenity"="fuel"](around:10000,${lat},${lng}););out center 20;`;
-            const url = "https://overpass-api.de/api/interpreter";
+        async function fetchNearbyStations(lat, lng) {
+            const radius = 10000; // 10 km yarıçap
+            const query = `
+                [out:json][timeout:15];
+                (
+                  node["amenity"="fuel"](around:${radius},${lat},${lng});
+                  way["amenity"="fuel"](around:${radius},${lat},${lng});
+                );
+                out center;
+            `;
+            const url = "https://overpass-api.de/api/interpreter?data=" + encodeURIComponent(query);
 
             try {
-                const response = await fetch(url, {
-                    method: 'POST',
-                    body: 'data=' + encodeURIComponent(query)
-                });
-                const result = await response.json();
-
-                if (!result.elements || result.elements.length === 0) {
-                    listContainer.innerHTML = '<p style="text-align:center; color:#666;">Yakınınızda istasyon bulunamadı.</p>';
-                    return;
-                }
-
-                let stations = result.elements.map(item => {
-                    const stLat = item.lat || (item.center && item.center.lat);
-                    const stLng = item.lon || (item.center && item.center.lon);
-                    const stName = (item.tags && (item.tags.brand || item.tags.name)) || 'Akaryakıt İstasyonu';
-                    const dist = getDistanceInKm(lat, lng, stLat, stLng);
-                    
-                    let matchedPrice = { benzin: '84.60', motorin: '95.00', lpg: '41.96' };
-                    const upperName = stName.toUpperCase();
-                    for (let b in dovizPrices) {
-                        if (upperName.includes(b) || b.includes(upperName)) {
-                            matchedPrice = dovizPrices[b];
-                            break;
-                        }
-                    }
-
-                    return {
-                        name: stName,
-                        lat: stLat,
-                        lng: stLng,
-                        distance: dist,
-                        prices: matchedPrice
-                    };
-                }).filter(s => s.lat && s.lng);
-
-                stations.sort((a, b) => a.distance - b.distance);
-                listContainer.innerHTML = '';
-
-                stations.forEach(st => {
-                    const distStr = st.distance < 1 ? 
-                        `${Math.round(st.distance * 1000)} m` : 
-                        `${st.distance.toFixed(1)} km`;
-
-                    const marker = L.marker([st.lat, st.lng]).addTo(map);
-                    marker.bindPopup(`<b>${st.name}</b><br>Mesafe: ${distStr}`);
-
-                    const card = document.createElement('div');
-                    card.className = 'station-card';
-                    card.innerHTML = `
-                        <div class="station-header">
-                            <div class="station-name">${st.name}</div>
-                            <div class="distance-tag">📍 ${distStr}</div>
-                        </div>
-                        <div class="prices">
-                            <div class="price-item"><div class="price-title">BENZİN</div><div class="price-val">₺${st.prices.benzin || '-'}</div></div>
-                            <div class="price-item"><div class="price-title">MOTORİN</div><div class="price-val">₺${st.prices.motorin || '-'}</div></div>
-                            <div class="price-item"><div class="price-title">LPG</div><div class="price-val">₺${st.prices.lpg || '-'}</div></div>
-                        </div>
-                        <button class="nav-btn" onclick="startGoogleMapsNavigation(${st.lat}, ${st.lng})">
-                           🚀 Google Haritalar'da Rota Başlat
-                        </button>
-                    `;
-                    listContainer.appendChild(card);
-                });
-
-            } catch (err) {
-                console.error("Yükleme hatası:", err);
+                const response = await fetch(url);
+                const data = await response.json();
+                return data.elements || [];
+            } catch (e) {
+                console.error("İstasyon verisi çekilemedi:", e);
+                return [];
             }
         }
 
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                    userLat = pos.coords.latitude;
-                    userLng = pos.coords.longitude;
-                    map.setView([userLat, userLng], 13);
-                    L.circle([userLat, userLng], {
-                        color: '#1976d2',
-                        fillColor: '#2196f3',
-                        fillOpacity: 0.4,
-                        radius: 300
-                    }).addTo(map);
-                    fetchNearbyStationsLive(userLat, userLng);
-                },
-                (err) => {
-                    fetchNearbyStationsLive(userLat, userLng);
-                },
-                { enableHighAccuracy: true, timeout: 8000 }
-            );
-        } else {
-            fetchNearbyStationsLive(userLat, userLng);
+        async function initApp() {
+            await fetchPrices();
+
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                        userLat = pos.coords.latitude;
+                        userLng = pos.coords.longitude;
+                        renderMapAndStations();
+                    },
+                    (err) => {
+                        console.warn("Konum alınamadı, varsayılan konum gösteriliyor.", err);
+                        renderMapAndStations();
+                    },
+                    { enableHighAccuracy: true, timeout: 8000 }
+                );
+            } else {
+                renderMapAndStations();
+            }
         }
+
+        async function renderMapAndStations() {
+            // Yandex Katmanı ile Haritayı Oluştur
+            map = L.map('map').setView([userLat, userLng], 13);
+
+            // Yandex Harita Görseli Katmanı
+            L.tileLayer('https://core-renderer-tiles.maps.yandex.net/tiles?l=map&v=21.06.18-0&x={x}&y={y}&z={z}&scale=1&lang=tr_TR', {
+                maxZoom: 19,
+                attribution: '&copy; Yandex'
+            }).addTo(map);
+
+            // Kullanıcı Konum Pini
+            L.circleMarker([userLat, userLng], {
+                radius: 8,
+                fillColor: "#1976d2",
+                color: "#fff",
+                weight: 3,
+                opacity: 1,
+                fillOpacity: 0.9
+            }).addTo(map).bindPopup("Mevcut Konumunuz");
+
+            const elements = await fetchNearbyStations(userLat, userLng);
+            const listContainer = document.getElementById('stations-list');
+
+            if (!elements || elements.length === 0) {
+                listContainer.innerHTML = '<p style="text-align:center; color:#666;">Yakınınızda akaryakıt istasyonu bulunamadı.</p>';
+                return;
+            }
+
+            let stations = elements.map(item => {
+                const stLat = item.lat || (item.center && item.center.lat);
+                const stLng = item.lon || (item.center && item.center.lon);
+                const stName = (item.tags && (item.tags.brand || item.tags.name)) || "Akaryakıt İstasyonu";
+                const dist = getDistanceInKm(userLat, userLng, stLat, stLng);
+
+                let matchedPrice = { benzin: '84.60', motorin: '95.00', lpg: '41.96' };
+                const upperName = stName.toUpperCase();
+                for (let b in dovizPrices) {
+                    if (upperName.includes(b) || b.includes(upperName)) {
+                        matchedPrice = dovizPrices[b];
+                        break;
+                    }
+                }
+
+                return {
+                    name: stName,
+                    lat: stLat,
+                    lng: stLng,
+                    distance: dist,
+                    prices: matchedPrice
+                };
+            }).filter(s => s.lat && s.lng);
+
+            stations.sort((a, b) => a.distance - b.distance);
+            listContainer.innerHTML = '';
+
+            stations.forEach(st => {
+                const distStr = st.distance < 1 ? 
+                    `${Math.round(st.distance * 1000)} m` : 
+                    `${st.distance.toFixed(1)} km`;
+
+                L.marker([st.lat, st.lng]).addTo(map)
+                    .bindPopup(`<b>${st.name}</b><br>Mesafe: ${distStr}`);
+
+                const card = document.createElement('div');
+                card.className = 'station-card';
+                card.innerHTML = `
+                    <div class="station-header">
+                        <div class="station-name">${st.name}</div>
+                        <div class="distance-tag">📍 ${distStr}</div>
+                    </div>
+                    <div class="prices">
+                        <div class="price-item"><div class="price-title">BENZİN</div><div class="price-val">₺${st.prices.benzin || '-'}</div></div>
+                        <div class="price-item"><div class="price-title">MOTORİN</div><div class="price-val">₺${st.prices.motorin || '-'}</div></div>
+                        <div class="price-item"><div class="price-title">LPG</div><div class="price-val">₺${st.prices.lpg || '-'}</div></div>
+                    </div>
+                    <button class="nav-btn" onclick="startYandexNav(${st.lat}, ${st.lng})">
+                       🚀 Yandex ile Rota Başlat
+                    </button>
+                `;
+                listContainer.appendChild(card);
+            });
+        }
+
+        window.onload = initApp;
     </script>
 </body>
 </html>
