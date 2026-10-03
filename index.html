@@ -3,9 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>En Yakın Akaryakıt İstasyonu</title>
+    <title>Canlı Akaryakıt Bulucu</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#1976d2">
+    
+    <!-- Leaflet Harita Kütüphanesi -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -22,120 +26,242 @@
             font-weight: bold;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-        .container {
-            padding: 15px;
+        #map {
+            height: 280px;
+            width: 100%;
         }
-        .card {
+        .container {
+            padding: 12px;
+        }
+        .station-card {
             background: white;
             border-radius: 10px;
-            padding: 16px;
-            margin-bottom: 15px;
+            padding: 14px;
+            margin-bottom: 12px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.06);
         }
-        .brand-title {
-            font-size: 18px;
+        .station-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .station-name {
+            font-size: 17px;
             font-weight: bold;
             color: #222;
-            margin-bottom: 8px;
         }
-        .btn-maps {
+        .distance-tag {
+            background-color: #e3f2fd;
+            color: #1565c0;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: bold;
+        }
+        .prices {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 10px;
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 6px;
+        }
+        .price-item {
+            text-align: center;
+        }
+        .price-title {
+            font-size: 11px;
+            color: #666;
+            margin-bottom: 2px;
+        }
+        .price-val {
+            font-weight: bold;
+            color: #d32f2f;
+            font-size: 15px;
+        }
+        .nav-btn {
             display: block;
             width: 100%;
             text-align: center;
             background-color: #2e7d32;
             color: white;
-            padding: 14px 0;
-            border-radius: 8px;
+            padding: 12px 0;
+            margin-top: 12px;
+            border-radius: 6px;
             font-weight: bold;
-            font-size: 16px;
-            text-decoration: none;
+            font-size: 15px;
             border: none;
             cursor: pointer;
+            text-decoration: none;
             box-sizing: border-box;
-            margin-top: 10px;
-        }
-        .btn-maps:active {
-            background-color: #1b5e20;
-        }
-        #status-text {
-            text-align: center;
-            color: #666;
-            font-size: 14px;
-            margin-bottom: 15px;
         }
     </style>
 </head>
 <body>
 
-    <header>📍 En Yakın Akaryakıt İstasyonları</header>
+    <header>⛽ Canlı Akaryakıt İstasyonları</header>
+    
+    <div id="map"></div>
 
-    <div class="container">
-        <div id="status-text">GPS konumunuz alınıyor...</div>
-
-        <div class="card">
-            <div class="brand-title">🔍 En Yakın Tüm İstasyonlar</div>
-            <p style="font-size: 13px; color: #666;">Konumunuza en yakın tüm benzin ve gaz istasyonlarını Google Haritalar'da listeleyin.</p>
-            <a id="btn-all" class="btn-maps" href="#">
-                📍 Google Haritalar'da Ara
-            </a>
-        </div>
-
-        <div class="card">
-            <div class="brand-title">🐚 Shell</div>
-            <a id="btn-shell" class="btn-maps" href="#">
-                🚀 En Yakın Shell'e Rota Çiz
-            </a>
-        </div>
-
-        <div class="card">
-            <div class="brand-title">🟡 Opet</div>
-            <a id="btn-opet" class="btn-maps" href="#">
-                🚀 En Yakın Opet'e Rota Çiz
-            </a>
-        </div>
-
-        <div class="card">
-            <div class="brand-title">🟢 BP</div>
-            <a id="btn-bp" class="btn-maps" href="#">
-                🚀 En Yakın BP'ye Rota Çiz
-            </a>
-        </div>
-
-        <div class="card">
-            <div class="brand-title">🔴 Petrol Ofisi</div>
-            <a id="btn-po" class="btn-maps" href="#">
-                🚀 En Yakın Petrol Ofisine Rota Çiz
-            </a>
-        </div>
+    <div class="container" id="stations-list">
+        <p style="text-align:center; color:#666; margin-top: 20px;">
+            📍 Konumunuz alınıyor ve çevrenizdeki istasyonlar canlı taranıyor...
+        </p>
     </div>
 
-    <script>
-        function updateLinks(lat, lng) {
-            const baseUrl = "https://www.google.com/maps/search/";
-            
-            document.getElementById('btn-all').href = `${baseUrl}?api=1&query=akaryakit+istasyonu&center=${lat},${lng}`;
-            document.getElementById('btn-shell').href = `${baseUrl}?api=1&query=Shell+akaryakit+istasyonu&center=${lat},${lng}`;
-            document.getElementById('btn-opet').href = `${baseUrl}?api=1&query=Opet+akaryakit+istasyonu&center=${lat},${lng}`;
-            document.getElementById('btn-bp').href = `${baseUrl}?api=1&query=BP+akaryakit+istasyonu&center=${lat},${lng}`;
-            document.getElementById('btn-po').href = `${baseUrl}?api=1&query=Petrol+Ofisi+akaryakit+istasyonu&center=${lat},${lng}`;
+    <!-- JS Kütüphaneleri -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-            document.getElementById('status-text').innerText = "✅ GPS Konumunuz Alındı. İstediğiniz markaya tıklayarak direkt rotayı açabilirsiniz.";
-            document.getElementById('status-text').style.color = "#2e7d32";
+    <script>
+        const SUPABASE_URL = "https://dzapuhihjzdmzvwzcxht.supabase.co";
+        const SUPABASE_KEY = "sb_publishable_atDC1UU40N7N-U-c3u__4A_mKuI2Oum";
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let userLat = 38.7569;
+        let userLng = 30.5387;
+        let dovizPrices = {};
+
+        const map = L.map('map').setView([userLat, userLng], 12);
+
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Map &copy; Esri'
+        }).addTo(map);
+
+        function getDistanceInKm(lat1, lon1, lat2, lon2) {
+            const R = 6371; 
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
         }
 
+        function startGoogleMapsNavigation(lat, lng) {
+            window.location.href = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+        }
+
+        // Supabase'den Güncel Fiyatları Çek
+        async function fetchPrices() {
+            try {
+                const { data } = await supabaseClient.from('doviz_prices').select('*');
+                if (data) {
+                    data.forEach(item => {
+                        if (item.brand) {
+                            dovizPrices[item.brand.toUpperCase()] = item;
+                        }
+                    });
+                }
+            } catch (e) {
+                console.log("Fiyat çekme hatası:", e);
+            }
+        }
+
+        // Bulunduğunuz Konumun Çevresindeki Gerçek İstasyonları Canlı Çekme (Overpass API)
+        async function fetchNearbyStationsLive(lat, lng) {
+            const listContainer = document.getElementById('stations-list');
+            await fetchPrices();
+
+            // 15km Çapındaki Tüm Akaryakıt İstasyonlarını Sorgula
+            const query = `[out:json];node["amenity"="fuel"](around:15000, ${lat}, ${lng});out body;`;
+            const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;
+
+            try {
+                const response = await fetch(url);
+                const result = await response.json();
+                
+                if (!result.elements || result.elements.length === 0) {
+                    listContainer.innerHTML = '<p style="text-align:center; color:#666;">Yakınınızda istasyon bulunamadı.</p>';
+                    return;
+                }
+
+                let stations = result.elements.map(item => {
+                    const stName = item.tags.brand || item.tags.name || 'Akaryakıt İstasyonu';
+                    const dist = getDistanceInKm(lat, lng, item.lat, item.lon);
+                    
+                    // Markaya uygun fiyat eşleştirme
+                    let matchedPrice = { benzin: '43.25', motorin: '43.50', lpg: '22.10' };
+                    const upperName = stName.toUpperCase();
+                    for (let b in dovizPrices) {
+                        if (upperName.includes(b) || b.includes(upperName)) {
+                            matchedPrice = dovizPrices[b];
+                            break;
+                        }
+                    }
+
+                    return {
+                        name: stName,
+                        lat: item.lat,
+                        lng: item.lon,
+                        distance: dist,
+                        prices: matchedPrice
+                    };
+                });
+
+                // Yakından uzağa sırala
+                stations.sort((a, b) => a.distance - b.distance);
+                listContainer.innerHTML = '';
+
+                stations.forEach(st => {
+                    const distStr = st.distance < 1 ? 
+                        `${Math.round(st.distance * 1000)} m` : 
+                        `${st.distance.toFixed(1)} km`;
+
+                    // Haritaya ekle
+                    const marker = L.marker([st.lat, st.lng]).addTo(map);
+                    marker.bindPopup(`<b>${st.name}</b><br>Mesafe: ${distStr}<br><button onclick="startGoogleMapsNavigation(${st.lat}, ${st.lng})" style="margin-top:5px; background:#2e7d32; color:white; border:none; padding:5px 10px; border-radius:3px; cursor:pointer;">Rota Çiz</button>`);
+
+                    // Liste kartı
+                    const card = document.createElement('div');
+                    card.className = 'station-card';
+                    card.innerHTML = `
+                        <div class="station-header">
+                            <div class="station-name">${st.name}</div>
+                            <div class="distance-tag">📍 ${distStr}</div>
+                        </div>
+                        <div class="prices">
+                            <div class="price-item"><div class="price-title">BENZİN</div><div class="price-val">₺${st.prices.benzin}</div></div>
+                            <div class="price-item"><div class="price-title">MOTORİN</div><div class="price-val">₺${st.prices.motorin}</div></div>
+                            <div class="price-item"><div class="price-title">LPG</div><div class="price-val">₺${st.prices.lpg}</div></div>
+                        </div>
+                        <button class="nav-btn" onclick="startGoogleMapsNavigation(${st.lat}, ${st.lng})">
+                           🚀 Google Haritalar'da Rota Başlat
+                        </button>
+                    `;
+                    listContainer.appendChild(card);
+                });
+
+            } catch (err) {
+                console.error("İstasyon çekme hatası:", err);
+                listContainer.innerHTML = '<p style="text-align:center; color:red;">Canlı istasyonlar yüklenirken bir hata oluştu.</p>';
+            }
+        }
+
+        // GPS Konum Tespiti
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (pos) => {
-                    updateLinks(pos.coords.latitude, pos.coords.longitude);
+                    userLat = pos.coords.latitude;
+                    userLng = pos.coords.longitude;
+                    
+                    map.setView([userLat, userLng], 13);
+                    L.circle([userLat, userLng], {
+                        color: '#1976d2',
+                        fillColor: '#2196f3',
+                        fillOpacity: 0.5,
+                        radius: 300
+                    }).addTo(map).bindPopup("<b>Mevcut Konumunuz</b>");
+
+                    fetchNearbyStationsLive(userLat, userLng);
                 },
                 (err) => {
-                    document.getElementById('status-text').innerText = "⚠️ GPS alınamadı. Genel arama bağlantıları aktif.";
-                    updateLinks(39.9334, 32.8597);
+                    fetchNearbyStationsLive(userLat, userLng);
                 },
-                { enableHighAccuracy: true, timeout: 8000 }
+                { enableHighAccuracy: true, timeout: 10000 }
             );
         } else {
-            updateLinks(39.9334, 32.8597);
+            fetchNearbyStationsLive(userLat, userLng);
         }
     </script>
 </body>
