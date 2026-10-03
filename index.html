@@ -106,6 +106,20 @@
             attribution: '© OpenStreetMap'
         }).addTo(map);
 
+        // Cihazın Android/iOS durumuna göre doğrudan harita uygulamasını tetikleyen fonksiyon
+        function openNativeMaps(lat, lng, name) {
+            const isAndroid = /Android/i.test(navigator.userAgent);
+            const label = encodeURIComponent(name || 'Akaryakıt İstasyonu');
+
+            if (isAndroid) {
+                // Android için doğrudan Google Haritalar uygulamasını açma isteği (Intent / Geo)
+                window.location.href = `geo:${lat},${lng}?q=${lat},${lng}(${label})`;
+            } else {
+                // iOS veya Masaüstü Web için harita linki
+                window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, '_blank');
+            }
+        }
+
         async function loadStations() {
             const { data: stations, error } = await supabaseClient.from('stations').select('*');
             const listContainer = document.getElementById('stations-list');
@@ -126,27 +140,25 @@
             stations.forEach(station => {
                 const lat = station.latitude || 38.7569;
                 const lng = station.longitude || 30.5387;
-
-                // Android'de doğrudan Google Haritalar Uygulamasını Açan Link
-                const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+                const name = station.name || 'Akaryakıt İstasyonu';
 
                 // Haritaya Pin Ekle
                 const marker = L.marker([lat, lng]).addTo(map);
-                marker.bindPopup(`<b>${station.name}</b><br>Benzin: ₺${station.benzin || '-'}<br><a href="${mapsUrl}">Yol Tarifi Al</a>`);
+                marker.bindPopup(`<b>${name}</b><br>Benzin: ₺${station.benzin || '-'}<br><a href="javascript:void(0)" onclick="openNativeMaps(${lat}, ${lng}, '${name}')">Google Haritalar'da Aç</a>`);
 
                 // Liste Kartı Oluştur
                 const card = document.createElement('div');
                 card.className = 'station-card';
                 card.innerHTML = `
-                    <div class="station-name">${station.name}</div>
+                    <div class="station-name">${name}</div>
                     <div style="font-size:12px; color:#777; margin-top:3px;">${station.address || 'Afyonkarahisar'}</div>
                     <div class="prices">
                         <div class="price-item"><div class="price-title">BENZİN</div><div class="price-val">₺${station.benzin || '-'}</div></div>
                         <div class="price-item"><div class="price-title">MOTORİN</div><div class="price-val">₺${station.motorin || '-'}</div></div>
                         <div class="price-item"><div class="price-title">LPG</div><div class="price-val">₺${station.lpg || '-'}</div></div>
                     </div>
-                    <a class="nav-btn" href="${mapsUrl}">
-                       📍 Google Haritalar'da Aç
+                    <a class="nav-btn" href="javascript:void(0)" onclick="openNativeMaps(${lat}, ${lng}, '${name}')">
+                       📍 Google Haritalar'da Yol Tarifi Al
                     </a>
                 `;
                 listContainer.appendChild(card);
