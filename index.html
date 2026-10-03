@@ -27,8 +27,6 @@
         .price-item { flex: 1; }
         .price-label { color: #64748b; font-size: 11px; margin-bottom: 3px; text-transform: uppercase; font-weight: bold; }
         .price-val { font-weight: bold; color: #dc2626; font-size: 14px; }
-        
-        .nav-btn { display: block; width: 100%; background: #16a34a; color: white; padding: 12px; text-align: center; border-radius: 10px; text-decoration: none; font-weight: bold; font-size: 14px; margin-top: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
     </style>
 </head>
 <body>
@@ -51,7 +49,7 @@
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // --- EKRAN GÖRÜNTÜSÜNDEN EKLENEN TÜM AFYON MERKEZ İSTASYONLARI VE FİYATLARI ---
+        // --- AFYON MERKEZ İSTASYONLARI VE FİYATLARI ---
         const manualStations = [
             { brand: "Petrol Ofisi", benzin: "86.80", motorin: "97.40", lpg: "41.20", lat: 38.7525, lng: 30.5400 },
             { brand: "Opet", benzin: "86.71", motorin: "97.31", lpg: "-", lat: 38.7612, lng: 30.5421 },
@@ -79,10 +77,11 @@
             { brand: "Sanoil", benzin: "86.80", motorin: "97.40", lpg: "-", lat: 38.7585, lng: 30.5305 }
         ];
 
+        // Harita katmanı engellenmeyen güvenli CartoDB altyapısına güncellendi
         let map = L.map('map').setView([38.7569, 30.5387], 13);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
             maxZoom: 19,
-            attribution: '© OpenStreetMap'
+            attribution: '© OpenStreetMap contributors & CARTO'
         }).addTo(map);
 
         let userMarker = null;
@@ -152,8 +151,6 @@
                     Math.round(st.calculatedDistance * 1000) + " m" : 
                     st.calculatedDistance.toFixed(1) + " km";
 
-                const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${st.lat},${st.lng}`;
-
                 list.innerHTML += `
                     <div class="card">
                         <div class="station-header">
@@ -174,7 +171,6 @@
                                 <div class="price-val">${st.lpg === '-' ? '-' : '₺' + st.lpg}</div>
                             </div>
                         </div>
-                        <a class="nav-btn" href="${mapsUrl}" target="_blank">🗺 Güzergahı Haritada Aç</a>
                     </div>
                 `;
 
