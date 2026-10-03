@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Afyon Akaryakıt Fiyatları</title>
+    <title>Akaryakıt Fiyatları & En Yakın İstasyonlar</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#1976d2">
     
@@ -26,7 +26,7 @@
             font-weight: bold;
         }
         #map {
-            height: 320px;
+            height: 300px;
             width: 100%;
         }
         .container {
@@ -39,10 +39,23 @@
             margin-bottom: 12px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
+        .station-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
         .station-name {
             font-size: 18px;
             font-weight: bold;
             color: #333;
+        }
+        .distance-tag {
+            background-color: #e3f2fd;
+            color: #1976d2;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
         }
         .prices {
             display: flex;
@@ -56,12 +69,13 @@
             text-align: center;
         }
         .price-title {
-            font-size: 12px;
+            font-size: 11px;
             color: #666;
         }
         .price-val {
             font-weight: bold;
             color: #d32f2f;
+            font-size: 14px;
         }
         .nav-btn {
             display: block;
@@ -72,7 +86,6 @@
             padding: 12px 0;
             margin-top: 10px;
             border-radius: 5px;
-            text-decoration: none;
             font-weight: bold;
             font-size: 15px;
             border: none;
@@ -82,13 +95,13 @@
 </head>
 <body>
 
-    <header>Afyon Akaryakıt İstasyonları</header>
+    <header>Akaryakıt İstasyonları</header>
     
     <!-- HARİTA BÖLÜMÜ -->
     <div id="map"></div>
 
     <div class="container" id="stations-list">
-        <p style="text-align:center; color:#666;">İstasyonlar yükleniyor...</p>
+        <p style="text-align:center; color:#666;">Konumunuz alınıyor ve en yakın istasyonlar hesaplanıyor...</p>
     </div>
 
     <!-- Leaflet JS & Supabase Client -->
@@ -101,21 +114,36 @@
         
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // Haritayı Afyonkarahisar merkezli başlat
-        const map = L.map('map').setView([38.7569, 30.5387], 12);
+        let userLat = 38.7569; // Varsayılan Afyonkarahisar
+        let userLng = 30.5387;
 
-        // API Key Gerektirmeyen Tamamen Ücretsiz ESRI Harita Katmanı
+        // Haritayı başlat
+        const map = L.map('map').setView([userLat, userLng], 12);
+
+        // ESRI Harita Katmanı (API Anahtarı gerektirmez ve engellenmez)
         L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
             attribution: 'Tiles &copy; Esri'
         }).addTo(map);
 
-        // Doğrudan Uygulamayı Açan Yol Tarifi Fonksiyonu
+        // Haversine Formülü ile İki Nokta Arasındaki Mesafeyi Hesaplama (KM cinsinden)
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371; // Dünya yarıçapı
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return R * c;
+        }
+
+        // Doğrudan Google Haritalar Uygulamasını ve Rotayı Açan Fonksiyon
         function openNativeMaps(lat, lng) {
             const isAndroid = /Android/i.test(navigator.userAgent);
             
             if (isAndroid) {
-                // Play Store'a gitmeden doğrudan Google Haritalar uygulamasında rotayı açar
-                window.location.href = `intent://maps.google.com/maps?daddr=${lat},${lng}#Intent;scheme=https;package=com.google.android.apps.maps;action=android.intent.action.VIEW;end`;
+                // Android'de Google Haritalar uygulamasını rota modunda tetikler
+                window.location.href = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
             } else {
                 window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, '_blank');
             }
@@ -136,22 +164,43 @@
                 return;
             }
 
+            // Her istasyon için mesafeyi hesapla
+            stations.forEach(station => {
+                const lat = station.latitude || 38.7569;
+                const lng = station.longitude || 30.5387;
+                station.distance = calculateDistance(userLat, userLng, lat, lng);
+            });
+
+            // En yakından en uzağa doğru sırala
+            stations.sort((a, b) => a.distance - b.distance);
+
             listContainer.innerHTML = '';
 
             stations.forEach(station => {
                 const lat = station.latitude || 38.7569;
                 const lng = station.longitude || 30.5387;
                 const name = station.name || 'Akaryakıt İstasyonu';
+                const distStr = station.distance < 1 ? 
+                    `${Math.round(station.distance * 1000)} m` : 
+                    `${station.distance.toFixed(1)} km`;
 
                 // Haritaya Pin Ekle
                 const marker = L.marker([lat, lng]).addTo(map);
-                marker.bindPopup(`<b>${name}</b><br>Benzin: ₺${station.benzin || '-'}<br><button onclick="openNativeMaps(${lat}, ${lng})" style="margin-top:5px; background:#388e3c; color:white; border:none; padding:5px 10px; border-radius:3px; cursor:pointer;">Yol Tarifi Al</button>`);
+                marker.bindPopup(`
+                    <b>${name}</b><br>
+                    Mesafe: ${distStr}<br>
+                    Benzin: ₺${station.benzin || '-'}<br>
+                    <button onclick="openNativeMaps(${lat}, ${lng})" style="margin-top:5px; background:#388e3c; color:white; border:none; padding:5px 10px; border-radius:3px; cursor:pointer;">Rota Başlat</button>
+                `);
 
                 // Liste Kartı Oluştur
                 const card = document.createElement('div');
                 card.className = 'station-card';
                 card.innerHTML = `
-                    <div class="station-name">${name}</div>
+                    <div class="station-header">
+                        <div class="station-name">${name}</div>
+                        <div class="distance-tag">📍 ${distStr}</div>
+                    </div>
                     <div style="font-size:12px; color:#777; margin-top:3px;">${station.address || 'Afyonkarahisar'}</div>
                     <div class="prices">
                         <div class="price-item"><div class="price-title">BENZİN</div><div class="price-val">₺${station.benzin || '-'}</div></div>
@@ -159,14 +208,39 @@
                         <div class="price-item"><div class="price-title">LPG</div><div class="price-val">₺${station.lpg || '-'}</div></div>
                     </div>
                     <button class="nav-btn" onclick="openNativeMaps(${lat}, ${lng})">
-                       📍 Google Haritalar'da Yol Tarifi Al
+                       🚀 Google Haritalar'da Rota Çiz
                     </button>
                 `;
                 listContainer.appendChild(card);
             });
         }
 
-        loadStations();
+        // Kullanıcı Konumunu Al
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    userLat = position.coords.latitude;
+                    userLng = position.coords.longitude;
+                    
+                    // Haritayı kullanıcının konumuna kaydır ve kendi konum pini ekle
+                    map.setView([userLat, userLng], 13);
+                    L.circle([userLat, userLng], {
+                        color: '#1976d2',
+                        fillColor: '#2196f3',
+                        fillOpacity: 0.5,
+                        radius: 200
+                    }).addTo(map).bindPopup("Mevcut Konumunuz");
+
+                    loadStations();
+                },
+                (error) => {
+                    console.warn("Konum izni alınamadı, varsayılan merkez kullanılıyor.");
+                    loadStations();
+                }
+            );
+        } else {
+            loadStations();
+        }
     </script>
 </body>
 </html>
