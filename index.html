@@ -69,11 +69,12 @@
             text-align: center;
             background-color: #388e3c;
             color: white;
-            padding: 10px 0;
+            padding: 12px 0;
             margin-top: 10px;
             border-radius: 5px;
             text-decoration: none;
             font-weight: bold;
+            font-size: 15px;
         }
     </style>
 </head>
@@ -93,7 +94,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <script>
-        // Supabase Bağlantı Bilgileri Entegre Edildi
         const SUPABASE_URL = "https://dzapuhihjzdmzvwzcxht.supabase.co";
         const SUPABASE_KEY = "sb_publishable_atDC1UU40N7N-U-c3u__4A_mKuI2Oum";
         
@@ -127,9 +127,12 @@
                 const lat = station.latitude || 38.7569;
                 const lng = station.longitude || 30.5387;
 
+                // Android'de doğrudan Google Haritalar Uygulamasını Açan Link
+                const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+
                 // Haritaya Pin Ekle
                 const marker = L.marker([lat, lng]).addTo(map);
-                marker.bindPopup(`<b>${station.name}</b><br>Benzin: ₺${station.benzin || '-'}<br><a href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}" target="_blank">Yol Tarifi Al</a>`);
+                marker.bindPopup(`<b>${station.name}</b><br>Benzin: ₺${station.benzin || '-'}<br><a href="${mapsUrl}">Yol Tarifi Al</a>`);
 
                 // Liste Kartı Oluştur
                 const card = document.createElement('div');
@@ -142,8 +145,8 @@
                         <div class="price-item"><div class="price-title">MOTORİN</div><div class="price-val">₺${station.motorin || '-'}</div></div>
                         <div class="price-item"><div class="price-title">LPG</div><div class="price-val">₺${station.lpg || '-'}</div></div>
                     </div>
-                    <a class="nav-btn" href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}" target="_blank">
-                       📍 Google Haritalar'da Yol Tarifi Al
+                    <a class="nav-btn" href="${mapsUrl}">
+                       📍 Google Haritalar'da Aç
                     </a>
                 `;
                 listContainer.appendChild(card);
