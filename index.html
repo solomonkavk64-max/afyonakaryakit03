@@ -3,27 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Akaryakıt Bulucu</title>
+    <title>Akaryakıt Fiyatları</title>
     <style>
         body { font-family: sans-serif; margin: 0; padding: 0; background: #f4f6f9; }
         header { background: #1976d2; color: white; padding: 16px; text-align: center; font-weight: bold; font-size: 18px; }
         .container { padding: 14px; max-width: 600px; margin: auto; }
-        .gps-btn { width: 100%; background: #d32f2f; color: white; padding: 16px; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-        .status { text-align: center; font-size: 14px; font-weight: bold; margin-bottom: 15px; color: #333; background: #fff; padding: 10px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .filter-box { background: white; padding: 15px; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .filter-box label { font-weight: bold; display: block; margin-bottom: 8px; color: #333; }
+        .filter-box select { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; background: #fff; }
+        .status { text-align: center; font-size: 14px; font-weight: bold; margin-bottom: 15px; color: #555; }
         .card { background: white; border-radius: 12px; padding: 16px; margin-bottom: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
         .station-title { font-size: 16px; font-weight: bold; color: #1976d2; margin-bottom: 8px; }
         .prices { display: flex; justify-content: space-around; background: #f8f9fa; padding: 10px; border-radius: 8px; margin-top: 10px; font-size: 14px; }
         .price-val { font-weight: bold; color: #d32f2f; }
-        .copy-btn { display: block; width: 100%; background: #2e7d32; color: white; padding: 12px; text-align: center; border: none; border-radius: 8px; font-weight: bold; font-size: 14px; margin-top: 12px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
     </style>
 </head>
 <body>
 
-    <header>⛽ Akaryakıt İstasyonları</header>
+    <header>⛽ Akaryakıt Fiyatları</header>
 
     <div class="container">
-        <button class="gps-btn" onclick="getLocation()">📍 GPS Konumumu Yenile</button>
-        <div id="status" class="status">Konum bekleniyor...</div>
+        <div class="filter-box">
+            <label for="citySelect">📍 Bulunduğunuz Şehri Seçin:</label>
+            <select id="citySelect" onchange="loadPrices()">
+                <option value="Afyonkarahisar">Afyonkarahisar</option>
+                <option value="Ankara">Ankara</option>
+                <option value="İstanbul">İstanbul</option>
+                <option value="İzmir">İzmir</option>
+                <option value="Antalya">Antalya</option>
+                <option value="Bursa">Bursa</option>
+                <option value="Eskişehir">Eskişehir</option>
+            </select>
+        </div>
+
+        <div id="status" class="status">Fiyatlar yükleniyor...</div>
         <div id="list"></div>
     </div>
 
@@ -35,54 +48,31 @@
             "sb_publishable_atDC1UU40N7N-U-c3u__4A_mKuI2Oum"
         );
 
-        let currentLat = 38.7569; 
-        let currentLng = 30.5387; 
-
         window.onload = function() {
-            getLocation();
+            loadPrices();
         };
 
-        function getLocation() {
-            const status = document.getElementById('status');
-            status.innerHTML = "GPS uydularından konum alınıyor...";
-            
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    (pos) => {
-                        currentLat = pos.coords.latitude;
-                        currentLng = pos.coords.longitude;
-                        status.innerHTML = `✅ Konumunuz: ${currentLat.toFixed(6)}, ${currentLng.toFixed(6)}`;
-                        status.style.color = "#2e7d32";
-                        
-                        loadPrices();
-                    },
-                    (err) => {
-                        status.innerHTML = "⚠️ Konum alınamadı. Telefonunuzun konum iznini kontrol edin.";
-                        status.style.color = "#d32f2f";
-                        loadPrices();
-                    },
-                    { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
-                );
-            } else {
-                status.innerHTML = "Cihazınız konum desteklemiyor.";
-                loadPrices();
-            }
-        }
-
         async function loadPrices() {
+            const selectedCity = document.getElementById('citySelect').value;
             const list = document.getElementById('list');
-            list.innerHTML = "Fiyatlar yükleniyor...";
+            const status = document.getElementById('status');
+            
+            list.innerHTML = "";
+            status.innerHTML = `${selectedCity} için fiyatlar getiriliyor...`;
 
             try {
-                const { data, error } = await supabaseClient.from('doviz_prices').select('*');
-                list.innerHTML = '';
+                // Supabase tablonuzda şehir sütunu varsa filtreleme yapıyoruz (Yoksa .eq('sehir', selectedCity) kısmını silebilirsiniz)
+                const { data, error } = await supabaseClient
+                    .from('doviz_prices')
+                    .select('*');
+
+                status.innerHTML = `✅ ${selectedCity} Güncel Fiyat Listesi`;
 
                 if (error) throw error;
 
                 if (data && data.length > 0) {
                     data.forEach(item => {
                         const brandName = item.brand || 'İstasyon';
-                        const coordText = `${currentLat.toFixed(6)}, ${currentLng.toFixed(6)}`;
 
                         list.innerHTML += `
                             <div class="card">
@@ -92,15 +82,14 @@
                                     <div>Motorin: <span class="price-val">₺${item.motorin || '-'}</span></div>
                                     <div>LPG: <span class="price-val">₺${item.lpg || '-'}</span></div>
                                 </div>
-                                <button class="copy-btn" onclick="navigator.clipboard.writeText('${coordText}'); alert('Koordinat kopyalandı: ${coordText}');">📋 Konum Koordinatını Kopyala</button>
                             </div>
                         `;
                     });
                 } else {
-                    list.innerHTML = "Kayıtlı fiyat bulunamadı.";
+                    status.innerHTML = "Kayıtlı fiyat bulunamadı.";
                 }
             } catch (e) {
-                list.innerHTML = "Veriler yüklenirken bir hata oluştu.";
+                status.innerHTML = "Veriler yüklenirken bir hata oluştu.";
             }
         }
     </script>
