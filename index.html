@@ -14,10 +14,7 @@
         .station-title { font-size: 16px; font-weight: bold; color: #1976d2; margin-bottom: 8px; }
         .prices { display: flex; justify-content: space-around; background: #f8f9fa; padding: 10px; border-radius: 8px; margin-top: 10px; font-size: 14px; }
         .price-val { font-weight: bold; color: #d32f2f; }
-        .nav-buttons { display: flex; gap: 8px; margin-top: 12px; }
-        .nav-btn { flex: 1; display: block; padding: 12px; text-align: center; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 14px; color: white; }
-        .google-nav { background: #1a73e8; }
-        .yandex-nav { background: #cb112abf; }
+        .nav-btn { display: block; width: 100%; background: #1a73e8; color: white; padding: 12px; text-align: center; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 14px; margin-top: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
     </style>
 </head>
 <body>
@@ -38,8 +35,8 @@
             "sb_publishable_atDC1UU40N7N-U-c3u__4A_mKuI2Oum"
         );
 
-        let currentLat = 38.7569; // Varsayılan enlem
-        let currentLng = 30.5387; // Varsayılan boylam
+        let currentLat = 38.7569; 
+        let currentLng = 30.5387; 
 
         window.onload = function() {
             getLocation();
@@ -47,7 +44,7 @@
 
         function getLocation() {
             const status = document.getElementById('status');
-            status.innerHTML = "GPS uydularından konum alınıyor...";
+            status.innerHTML = "GPS konumunuz alınıyor...";
             
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
@@ -60,7 +57,7 @@
                         loadPrices();
                     },
                     (err) => {
-                        status.innerHTML = "⚠️ Konum alınamadı. Varsayılan konum kullanılıyor.";
+                        status.innerHTML = "⚠️ Konum alınamadı, varsayılan merkez kullanılıyor.";
                         status.style.color = "#d32f2f";
                         loadPrices();
                     },
@@ -85,9 +82,8 @@
                 if (data && data.length > 0) {
                     data.forEach(item => {
                         const brandName = item.brand || 'İstasyon';
-                        // Google Maps ve Yandex Navigasyon yönlendirme linkleri
-                        const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${currentLat},${currentLng}`;
-                        const yandexNavUrl = `https://yandex.com.tr/harita/?rtext=~${currentLat},${currentLng}&rtt=auto`;
+                        // Doğrudan tarayıcı üzerinden haritayı açan evrensel Google Maps web bağlantısı
+                        const mapsUrl = `https://maps.google.com/?q=${currentLat},${currentLng}`;
 
                         list.innerHTML += `
                             <div class="card">
@@ -97,10 +93,7 @@
                                     <div>Motorin: <span class="price-val">₺${item.motorin || '-'}</span></div>
                                     <div>LPG: <span class="price-val">₺${item.lpg || '-'}</span></div>
                                 </div>
-                                <div class="nav-buttons">
-                                    <a class="nav-btn google-nav" href="${googleMapsUrl}" target="_blank">🗺️️ Google Haritalar</a>
-                                    <a class="nav-btn yandex-nav" href="${yandexNavUrl}" target="_blank">🚗 Yandex Navigasyon</a>
-                                </div>
+                                <a class="nav-btn" href="${mapsUrl}" target="_blank">🗺 Google Haritalar ile Rota Aç</a>
                             </div>
                         `;
                     });
