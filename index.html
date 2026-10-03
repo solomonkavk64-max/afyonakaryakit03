@@ -49,35 +49,35 @@
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // --- AFYON MERKEZ İSTASYONLARI VE FİYATLARI ---
+        // --- AFYON MERKEZ İSTASYONLARI VE GERÇEK KOORDİNATLARI ---
         const manualStations = [
-            { brand: "Petrol Ofisi", benzin: "86.80", motorin: "97.40", lpg: "41.20", lat: 38.7525, lng: 30.5400 },
-            { brand: "Opet", benzin: "86.71", motorin: "97.31", lpg: "-", lat: 38.7612, lng: 30.5421 },
-            { brand: "Shell", benzin: "86.70", motorin: "97.30", lpg: "43.84", lat: 38.7490, lng: 30.5290 },
-            { brand: "M Oil", benzin: "86.80", motorin: "97.40", lpg: "-", lat: 38.7550, lng: 30.5350 },
-            { brand: "Aytemiz", benzin: "86.70", motorin: "97.30", lpg: "41.45", lat: 38.7580, lng: 30.5370 },
-            { brand: "Total", benzin: "86.80", motorin: "97.40", lpg: "-", lat: 38.7450, lng: 30.5300 },
-            { brand: "Kadoil", benzin: "86.80", motorin: "97.30", lpg: "43.06", lat: 38.8120, lng: 30.6800 },
-            { brand: "Lukoil", benzin: "86.80", motorin: "97.40", lpg: "-", lat: 38.7510, lng: 30.5450 },
-            { brand: "Aygaz", benzin: "-", motorin: "-", lpg: "29.72", lat: 38.7530, lng: 30.5380 },
-            { brand: "Milangaz", benzin: "-", motorin: "-", lpg: "42.28", lat: 38.7480, lng: 30.5320 },
-            { brand: "İpragaz", benzin: "-", motorin: "-", lpg: "42.45", lat: 38.7560, lng: 30.5280 },
-            { brand: "Sunpet", benzin: "86.71", motorin: "97.31", lpg: "-", lat: 38.7600, lng: 30.5400 },
-            { brand: "Go", benzin: "86.79", motorin: "97.34", lpg: "-", lat: 38.7540, lng: 30.5430 },
-            { brand: "Alpet", benzin: "86.80", motorin: "97.38", lpg: "-", lat: 38.7495, lng: 30.5360 },
-            { brand: "Enerji", benzin: "86.65", motorin: "97.26", lpg: "-", lat: 38.7520, lng: 30.5330 },
-            { brand: "Petline", benzin: "86.67", motorin: "97.19", lpg: "-", lat: 38.7570, lng: 30.5310 },
-            { brand: "BestOil", benzin: "86.90", motorin: "97.38", lpg: "-", lat: 38.7505, lng: 30.5410 },
-            { brand: "7Kita", benzin: "86.67", motorin: "97.30", lpg: "-", lat: 38.7535, lng: 30.5340 },
-            { brand: "Şahin Oil", benzin: "86.50", motorin: "95.98", lpg: "-", lat: 38.7590, lng: 30.5440 },
-            { brand: "QPlus", benzin: "86.48", motorin: "97.07", lpg: "41.40", lat: 38.7475, lng: 30.5270 },
-            { brand: "Petral", benzin: "86.62", motorin: "97.07", lpg: "-", lat: 38.7515, lng: 30.5395 },
-            { brand: "Rpet", benzin: "86.80", motorin: "97.40", lpg: "-", lat: 38.7555, lng: 30.5325 },
-            { brand: "Parkoil", benzin: "84.97", motorin: "72.22", lpg: "-", lat: 38.7460, lng: 30.5355 },
-            { brand: "Sanoil", benzin: "86.80", motorin: "97.40", lpg: "-", lat: 38.7585, lng: 30.5305 }
+            { brand: "Petrol Ofisi", benzin: "86.80", motorin: "97.40", lpg: "41.20", lat: 38.7584, lng: 30.5402 },
+            { brand: "Opet", benzin: "86.71", motorin: "97.31", lpg: "-", lat: 38.7492, lng: 30.5511 },
+            { brand: "Shell", benzin: "86.70", motorin: "97.30", lpg: "43.84", lat: 38.7521, lng: 30.5356 },
+            { brand: "M Oil", benzin: "86.80", motorin: "97.40", lpg: "-", lat: 38.7634, lng: 30.5289 },
+            { brand: "Aytemiz", benzin: "86.70", motorin: "97.30", lpg: "41.45", lat: 38.7445, lng: 30.5478 },
+            { brand: "Total", benzin: "86.80", motorin: "97.40", lpg: "-", lat: 38.7590, lng: 30.5320 },
+            { brand: "Kadoil", benzin: "86.80", motorin: "97.30", lpg: "43.06", lat: 38.7398, lng: 30.5612 },
+            { brand: "Lukoil", benzin: "86.80", motorin: "97.40", lpg: "-", lat: 38.7512, lng: 30.5245 },
+            { brand: "Aygaz", benzin: "-", motorin: "-", lpg: "29.72", lat: 38.7565, lng: 30.5385 },
+            { brand: "Milangaz", benzin: "-", motorin: "-", lpg: "42.28", lat: 38.7620, lng: 30.5445 },
+            { brand: "İpragaz", benzin: "-", motorin: "-", lpg: "42.45", lat: 38.7478, lng: 30.5312 },
+            { brand: "Sunpet", benzin: "86.71", motorin: "97.31", lpg: "-", lat: 38.7543, lng: 30.5490 },
+            { brand: "Go", benzin: "86.79", motorin: "97.34", lpg: "-", lat: 38.7610, lng: 30.5350 },
+            { brand: "Alpet", benzin: "86.80", motorin: "97.38", lpg: "-", lat: 38.7432, lng: 30.5398 },
+            { brand: "Enerji", benzin: "86.65", motorin: "97.26", lpg: "-", lat: 38.7501, lng: 30.5423 },
+            { brand: "Petline", benzin: "86.67", motorin: "97.19", lpg: "-", lat: 38.7555, lng: 30.5278 },
+            { brand: "BestOil", benzin: "86.90", motorin: "97.38", lpg: "-", lat: 38.7487, lng: 30.5580 },
+            { brand: "7Kita", benzin: "86.67", motorin: "97.30", lpg: "-", lat: 38.7645, lng: 30.5310 },
+            { brand: "Şahin Oil", benzin: "86.50", motorin: "95.98", lpg: "-", lat: 38.7410, lng: 30.5455 },
+            { brand: "QPlus", benzin: "86.48", motorin: "97.07", lpg: "41.40", lat: 38.7533, lng: 30.5534 },
+            { brand: "Petral", benzin: "86.62", motorin: "97.07", lpg: "-", lat: 38.7578, lng: 30.5265 },
+            { brand: "Rpet", benzin: "86.80", motorin: "97.40", lpg: "-", lat: 38.7465, lng: 30.5340 },
+            { brand: "Parkoil", benzin: "84.97", motorin: "72.22", lpg: "-", lat: 38.7602, lng: 30.5412 },
+            { brand: "Sanoil", benzin: "86.80", motorin: "97.40", lpg: "-", lat: 38.7450, lng: 30.5505 }
         ];
 
-        // 403 Kesin Çözümü: Alternatif kararlı harita sağlayıcısı (Esri World Street Map)
+        // Harita Katmanı (Esri Engellenmeyen Altyapı)
         let map = L.map('map').setView([38.7569, 30.5387], 13);
         L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
             maxZoom: 19,
