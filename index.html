@@ -49,7 +49,7 @@
         function initMap(lat, lng) {
             if (!map) {
                 map = L.map('map').setView([lat, lng], 15);
-                // Tamamen ücretsiz, açık kaynaklı ve engelsiz harita katmanı
+                // Kesinlikle anahtar istemeyen resmi ve ücretsiz OSM katmanı
                 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
                     maxZoom: 19,
                     attribution: '&copy; OpenStreetMap'
@@ -81,7 +81,7 @@
                         loadPrices(lat, lng);
                     },
                     (err) => {
-                        status.innerHTML = "⚠️ Konum alınamadı, varsayılan merkez gösteriliyor.";
+                        status.innerHTML = "⚠️ Konum alınamadı, varsayılan merkez kullanılıyor.";
                         status.style.color = "#d32f2f";
                         loadPrices(38.7569, 30.5387);
                     },
