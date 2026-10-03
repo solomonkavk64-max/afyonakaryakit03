@@ -118,7 +118,7 @@
         const SUPABASE_KEY = "sb_publishable_atDC1UU40N7N-U-c3u__4A_mKuI2Oum";
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // Varsayılan Koordinatlar (Afyonkarahisar Merkez)
+        // Varsayılan Koordinatlar
         let userLat = 38.7569;
         let userLng = 30.5387;
         let dovizPrices = {};
@@ -126,10 +126,9 @@
         // Haritayı Oluştur
         const map = L.map('map').setView([userLat, userLng], 13);
 
-        // 1. DÜZELTME: Engellenmeyen CartoDB Harita Katmanı (403 Hatasını Çözer)
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; OpenStreetMap &copy; CARTO',
-            subdomains: 'abcd',
+        // API KEY İSTEMEYEN %100 ÜCRETSİZ ESRI HARİTA KATMANI
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ, USGS, Intermap, iPC, NRCAN, Esri Japan, METI, Esri China (Hong Kong), Esri (Thailand), TomTom, 2012',
             maxZoom: 19
         }).addTo(map);
 
@@ -163,21 +162,30 @@
             }
         }
 
-        // 2. DÜZELTME: İstasyonları Çekme (Overpass API Güvenli Bağlantı)
+        // İstasyonları Çekme (Hızlı ve Kesintisiz Overpass Sunucusu)
         async function fetchNearbyStationsLive(lat, lng) {
             const listContainer = document.getElementById('stations-list');
             await fetchPrices();
 
-            // 10 km yarıçaptaki istasyonları ara
-            const overpassQuery = `[out:json][timeout:15];node["amenity"="fuel"](around:10000,${lat},${lng});out body 25;`;
-            const url = "https://overpass-api.de/api/interpreter";
+            // 10 km yarıçaptaki benzincileri filtreleme
+            const overpassQuery = `[out:json][timeout:25];(node["amenity"="fuel"](around:10000,${lat},${lng});way["amenity"="fuel"](around:10000,${lat},${lng}););out center 25;`;
+            
+            // Alternatif hızlı Overpass endpoint'i
+            const url = "https://overpass.kumi.systems/api/interpreter";
 
             try {
                 const response = await fetch(url, {
                     method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
                     body: 'data=' + encodeURIComponent(overpassQuery)
                 });
                 
+                if (!response.ok) {
+                    throw new Error("Ağ yanıtı başarısız");
+                }
+
                 const result = await response.json();
 
                 if (!result.elements || result.elements.length === 0) {
@@ -186,8 +194,10 @@
                 }
 
                 let stations = result.elements.map(item => {
+                    const stLat = item.lat || (item.center && item.center.lat);
+                    const stLng = item.lon || (item.center && item.center.lon);
                     const stName = (item.tags && (item.tags.brand || item.tags.name)) || 'Akaryakıt İstasyonu';
-                    const dist = getDistanceInKm(lat, lng, item.lat, item.lon);
+                    const dist = getDistanceInKm(lat, lng, stLat, stLng);
                     
                     let matchedPrice = { benzin: '43.25', motorin: '43.50', lpg: '22.10' };
                     const upperName = stName.toUpperCase();
@@ -200,14 +210,14 @@
 
                     return {
                         name: stName,
-                        lat: item.lat,
-                        lng: item.lon,
+                        lat: stLat,
+                        lng: stLng,
                         distance: dist,
                         prices: matchedPrice
                     };
-                });
+                }).filter(s => s.lat && s.lng);
 
-                // En yakından uzaka sırala
+                // Yakından uzağa sırala
                 stations.sort((a, b) => a.distance - b.distance);
                 listContainer.innerHTML = '';
 
@@ -242,7 +252,7 @@
 
             } catch (err) {
                 console.error("İstasyon çekme hatası:", err);
-                listContainer.innerHTML = '<p style="text-align:center; color:#d32f2f;">İstasyon verileri alınırken bir sorun oluştu. Lütfen bağlantınızı kontrol edin.</p>';
+                listContainer.innerHTML = '<p style="text-align:center; color:#d32f2f;">İstasyon verileri alınırken bir sorun oluştu. Lütfen bağlantınızı kontrol edip tekrar deneyin.</p>';
             }
         }
 
