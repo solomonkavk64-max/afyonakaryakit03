@@ -7,7 +7,7 @@
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#1976d2">
     
-    <!-- Leaflet Harita Kütüphanesi -->
+    <!-- Leaflet Harita CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
     <style>
@@ -104,12 +104,12 @@
     <div id="map"></div>
 
     <div class="container" id="stations-list">
-        <p style="text-align:center; color:#666; margin-top: 20px;">
-            📍 Konumunuz taranıyor ve çevrenizdeki istasyonlar yükleniyor...
+        <p style="text-align:center; color:#666; margin-top: 20px;" id="status-text">
+            📍 Konumunuz alınıyor ve istasyonlar taranıyor...
         </p>
     </div>
 
-    <!-- JS Kütüphaneleri -->
+    <!-- Leaflet & Supabase JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -118,7 +118,7 @@
         const SUPABASE_KEY = "sb_publishable_atDC1UU40N7N-U-c3u__4A_mKuI2Oum";
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // Varsayılan Koordinatlar
+        // Varsayılan Koordinatlar (İzin verilmezse varsayılan merkez)
         let userLat = 38.7569;
         let userLng = 30.5387;
         let dovizPrices = {};
@@ -126,10 +126,10 @@
         // Haritayı Oluştur
         const map = L.map('map').setView([userLat, userLng], 13);
 
-        // API KEY İSTEMEYEN %100 ÜCRETSİZ ESRI HARİTA KATMANI
-        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
-            attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ, USGS, Intermap, iPC, NRCAN, Esri Japan, METI, Esri China (Hong Kong), Esri (Thailand), TomTom, 2012',
-            maxZoom: 19
+        // %100 Ücretsiz Resmi OpenStreetMap Katmanı (API KEY İstemez)
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         }).addTo(map);
 
         function getDistanceInKm(lat1, lon1, lat2, lon2) {
@@ -143,10 +143,10 @@
         }
 
         function startGoogleMapsNavigation(lat, lng) {
-            window.location.href = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+            window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, '_blank');
         }
 
-        // Supabase'den Fiyat Verilerini Çekme
+        // Supabase Fiyat Verileri
         async function fetchPrices() {
             try {
                 const { data } = await supabaseClient.from('doviz_prices').select('*');
@@ -158,44 +158,33 @@
                     });
                 }
             } catch (e) {
-                console.log("Fiyat çekme uyarısı:", e);
+                console.warn("Fiyat tablosu okunamadı:", e);
             }
         }
 
-        // İstasyonları Çekme (Hızlı ve Kesintisiz Overpass Sunucusu)
+        // İstasyonları Çekme
         async function fetchNearbyStationsLive(lat, lng) {
             const listContainer = document.getElementById('stations-list');
             await fetchPrices();
 
-            // 10 km yarıçaptaki benzincileri filtreleme
-            const overpassQuery = `[out:json][timeout:25];(node["amenity"="fuel"](around:10000,${lat},${lng});way["amenity"="fuel"](around:10000,${lat},${lng}););out center 25;`;
-            
-            // Alternatif hızlı Overpass endpoint'i
-            const url = "https://overpass.kumi.systems/api/interpreter";
+            // Overpass API Query
+            const query = `[out:json][timeout:15];node["amenity"="fuel"](around:8000,${lat},${lng});out body 20;`;
+            const url = "https://overpass-api.de/api/interpreter?data=" + encodeURIComponent(query);
 
             try {
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    },
-                    body: 'data=' + encodeURIComponent(overpassQuery)
-                });
-                
-                if (!response.ok) {
-                    throw new Error("Ağ yanıtı başarısız");
-                }
+                const response = await fetch(url);
+                if (!response.ok) throw new Error("Ağ hatası");
 
                 const result = await response.json();
 
                 if (!result.elements || result.elements.length === 0) {
-                    listContainer.innerHTML = '<p style="text-align:center; color:#666;">Yakınınızda (10km) istasyon bulunamadı.</p>';
+                    listContainer.innerHTML = '<p style="text-align:center; color:#666;">Yakınınızda (8km) istasyon bulunamadı.</p>';
                     return;
                 }
 
                 let stations = result.elements.map(item => {
-                    const stLat = item.lat || (item.center && item.center.lat);
-                    const stLng = item.lon || (item.center && item.center.lon);
+                    const stLat = item.lat;
+                    const stLng = item.lon;
                     const stName = (item.tags && (item.tags.brand || item.tags.name)) || 'Akaryakıt İstasyonu';
                     const dist = getDistanceInKm(lat, lng, stLat, stLng);
                     
@@ -217,7 +206,6 @@
                     };
                 }).filter(s => s.lat && s.lng);
 
-                // Yakından uzağa sırala
                 stations.sort((a, b) => a.distance - b.distance);
                 listContainer.innerHTML = '';
 
@@ -226,11 +214,11 @@
                         `${Math.round(st.distance * 1000)} m` : 
                         `${st.distance.toFixed(1)} km`;
 
-                    // Haritaya Pin Ekle
+                    // Pini Haritaya Ekle
                     const marker = L.marker([st.lat, st.lng]).addTo(map);
-                    marker.bindPopup(`<b>${st.name}</b><br>Mesafe: ${distStr}<br><button onclick="startGoogleMapsNavigation(${st.lat}, ${st.lng})" style="margin-top:5px; background:#2e7d32; color:white; border:none; padding:5px 10px; border-radius:3px; cursor:pointer;">Rota Başlat</button>`);
+                    marker.bindPopup(`<b>${st.name}</b><br>Mesafe: ${distStr}`);
 
-                    // Listeye Kart Ekle
+                    // Kart Oluştur
                     const card = document.createElement('div');
                     card.className = 'station-card';
                     card.innerHTML = `
@@ -251,12 +239,12 @@
                 });
 
             } catch (err) {
-                console.error("İstasyon çekme hatası:", err);
-                listContainer.innerHTML = '<p style="text-align:center; color:#d32f2f;">İstasyon verileri alınırken bir sorun oluştu. Lütfen bağlantınızı kontrol edip tekrar deneyin.</p>';
+                console.error("Yükleme Hatası:", err);
+                listContainer.innerHTML = '<p style="text-align:center; color:#d32f2f;">Sunucudan veri alınırken bir gecikme yaşandı. Lütfen sayfayı yenileyin.</p>';
             }
         }
 
-        // GPS Konum Al
+        // GPS Konum Sorgulama
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (pos) => {
@@ -268,16 +256,16 @@
                         color: '#1976d2',
                         fillColor: '#2196f3',
                         fillOpacity: 0.4,
-                        radius: 400
-                    }).addTo(map).bindPopup("<b>Mevcut Konumunuz</b>");
+                        radius: 300
+                    }).addTo(map).bindPopup("Mevcut Konumunuz");
 
                     fetchNearbyStationsLive(userLat, userLng);
                 },
                 (err) => {
-                    console.warn("GPS izni verilmedi veya zaman aşımı, varsayılan konum yükleniyor.");
+                    console.warn("GPS Konumu alınamadı, varsayılan alan yükleniyor.", err);
                     fetchNearbyStationsLive(userLat, userLng);
                 },
-                { enableHighAccuracy: true, timeout: 8000 }
+                { enableHighAccuracy: true, timeout: 10000 }
             );
         } else {
             fetchNearbyStationsLive(userLat, userLng);
