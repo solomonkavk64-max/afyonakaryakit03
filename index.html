@@ -152,25 +152,39 @@
         }
 
         async function fetchNearbyStations(lat, lng) {
-            const radius = 10000; // 10 km yarıçap
+            const radius = 25000; // 25 km geniş yarıçap
             const query = `
-                [out:json][timeout:15];
+                [out:json][timeout:25];
                 (
                   node["amenity"="fuel"](around:${radius},${lat},${lng});
                   way["amenity"="fuel"](around:${radius},${lat},${lng});
+                  node["building"="fuel"](around:${radius},${lat},${lng});
+                  way["building"="fuel"](around:${radius},${lat},${lng});
                 );
                 out center;
             `;
-            const url = "https://overpass-api.de/api/interpreter?data=" + encodeURIComponent(query);
+            
+            // Yedekli Overpass Sunucu Listesi
+            const endpoints = [
+                "https://overpass.kumi.systems/api/interpreter",
+                "https://overpass-api.de/api/interpreter",
+                "https://maps.mail.ru/osm/tools/overpass/api/interpreter"
+            ];
 
-            try {
-                const response = await fetch(url);
-                const data = await response.json();
-                return data.elements || [];
-            } catch (e) {
-                console.error("İstasyon verisi çekilemedi:", e);
-                return [];
+            for (let ep of endpoints) {
+                try {
+                    const response = await fetch(ep + "?data=" + encodeURIComponent(query));
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.elements && data.elements.length > 0) {
+                            return data.elements;
+                        }
+                    }
+                } catch (e) {
+                    console.warn(`${ep} yanıt vermedi, sonraki sunucuya geçiliyor...`);
+                }
             }
+            return [];
         }
 
         async function initApp() {
@@ -195,16 +209,15 @@
         }
 
         async function renderMapAndStations() {
-            // Yandex Katmanı ile Haritayı Oluştur
-            map = L.map('map').setView([userLat, userLng], 13);
+            map = L.map('map').setView([userLat, userLng], 12);
 
-            // Yandex Harita Görseli Katmanı
+            // Yandex Katmanı
             L.tileLayer('https://core-renderer-tiles.maps.yandex.net/tiles?l=map&v=21.06.18-0&x={x}&y={y}&z={z}&scale=1&lang=tr_TR', {
                 maxZoom: 19,
                 attribution: '&copy; Yandex'
             }).addTo(map);
 
-            // Kullanıcı Konum Pini
+            // Kullanıcı Pini
             L.circleMarker([userLat, userLng], {
                 radius: 8,
                 fillColor: "#1976d2",
