@@ -3,9 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Yandex ile Canlı Akaryakıt Bulucu</title>
+    <title>Canlı Akaryakıt Bulucu</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#1976d2">
+    
+    <!-- Leaflet Harita CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
     <style>
         body {
@@ -96,17 +99,18 @@
 </head>
 <body>
 
-    <header>⛽ Canlı Akaryakıt İstasyonları (Yandex)</header>
+    <header>⛽ Canlı Akaryakıt İstasyonları</header>
     
     <div id="map"></div>
 
     <div class="container" id="stations-list">
-        <p style="text-align:center; color:#666; margin-top: 20px;" id="status-text">
-            📍 Yandex Harita yükleniyor ve istasyonlar aranıyor...
+        <p style="text-align:center; color:#666; margin-top: 20px;">
+            📍 Konumunuz taranıyor ve istasyonlar yükleniyor...
         </p>
     </div>
 
-    <!-- Supabase JS -->
+    <!-- Leaflet & Supabase JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <script>
@@ -114,13 +118,19 @@
         const SUPABASE_KEY = "sb_publishable_atDC1UU40N7N-U-c3u__4A_mKuI2Oum";
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // Yandex API Anahtarınız
-        const YANDEX_API_KEY = "0c2833ab-a629-4aa3-a049-abc5e81d0119";
-
-        let myMap;
         let userLat = 38.7569;
         let userLng = 30.5387;
         let dovizPrices = {};
+
+        // Haritayı Oluştur
+        const map = L.map('map').setView([userLat, userLng], 13);
+
+        // 403 Hatası Vermeyen Güvenli Harita Katmanı (CartoDB Basemaps)
+        L.tileLayer('https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            maxZoom: 19,
+            subdomains: 'abcd',
+            attribution: '&copy; OpenStreetMap &copy; CARTO'
+        }).addTo(map);
 
         function getDistanceInKm(lat1, lon1, lat2, lon2) {
             const R = 6371; 
@@ -132,8 +142,8 @@
             return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
         }
 
-        function startNavigation(lat, lng) {
-            window.open(`https://yandex.com.tr/harita/?rtext=~${lat},${lng}&rtt=auto`, '_blank');
+        function startGoogleMapsNavigation(lat, lng) {
+            window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, '_blank');
         }
 
         async function fetchPrices() {
@@ -147,67 +157,36 @@
                     });
                 }
             } catch (e) {
-                console.warn("Fiyat verisi alınamadı:", e);
+                console.warn("Fiyat çekme uyarısı:", e);
             }
         }
 
-        function initYandexMap() {
-            ymaps.ready(() => {
-                if (navigator.geolocation) {
-                    navigator.geolocation.getCurrentPosition(
-                        (pos) => {
-                            userLat = pos.coords.latitude;
-                            userLng = pos.coords.longitude;
-                            loadMapAndSearch();
-                        },
-                        (err) => {
-                            console.warn("GPS alınamadı, varsayılan alan yükleniyor.", err);
-                            loadMapAndSearch();
-                        },
-                        { enableHighAccuracy: true, timeout: 8000 }
-                    );
-                } else {
-                    loadMapAndSearch();
-                }
-            });
-        }
-
-        async function loadMapAndSearch() {
+        async function fetchNearbyStationsLive(lat, lng) {
+            const listContainer = document.getElementById('stations-list');
             await fetchPrices();
 
-            myMap = new ymaps.Map("map", {
-                center: [userLat, userLng],
-                zoom: 13,
-                controls: ['zoomControl', 'geolocationControl']
-            });
+            const query = `[out:json][timeout:10];(node["amenity"="fuel"](around:10000,${lat},${lng});way["amenity"="fuel"](around:10000,${lat},${lng}););out center 20;`;
+            const url = "https://overpass-api.de/api/interpreter";
 
-            const userPlacemark = new ymaps.Placemark([userLat, userLng], {
-                hintContent: 'Mevcut Konumunuz'
-            }, {
-                preset: 'islands#blueCircleDotIcon'
-            });
-            myMap.geoObjects.add(userPlacemark);
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    body: 'data=' + encodeURIComponent(query)
+                });
+                const result = await response.json();
 
-            ymaps.search('benzin istasyonu', {
-                boundedBy: myMap.getBounds(),
-                results: 20
-            }).then((res) => {
-                const listContainer = document.getElementById('stations-list');
-                const geoObjects = res.geoObjects.toArray();
-
-                if (geoObjects.length === 0) {
-                    listContainer.innerHTML = '<p style="text-align:center; color:#666;">Yakında akaryakıt istasyonu bulunamadı.</p>';
+                if (!result.elements || result.elements.length === 0) {
+                    listContainer.innerHTML = '<p style="text-align:center; color:#666;">Yakınınızda istasyon bulunamadı.</p>';
                     return;
                 }
 
-                let stations = geoObjects.map(obj => {
-                    const coords = obj.geometry.getCoordinates();
-                    const stLat = coords[0];
-                    const stLng = coords[1];
-                    const stName = obj.properties.get('name') || 'Akaryakıt İstasyonu';
-                    const dist = getDistanceInKm(userLat, userLng, stLat, stLng);
-
-                    let matchedPrice = { benzin: '43.25', motorin: '43.50', lpg: '22.10' };
+                let stations = result.elements.map(item => {
+                    const stLat = item.lat || (item.center && item.center.lat);
+                    const stLng = item.lon || (item.center && item.center.lon);
+                    const stName = (item.tags && (item.tags.brand || item.tags.name)) || 'Akaryakıt İstasyonu';
+                    const dist = getDistanceInKm(lat, lng, stLat, stLng);
+                    
+                    let matchedPrice = { benzin: '84.60', motorin: '95.00', lpg: '41.96' };
                     const upperName = stName.toUpperCase();
                     for (let b in dovizPrices) {
                         if (upperName.includes(b) || b.includes(upperName)) {
@@ -223,7 +202,7 @@
                         distance: dist,
                         prices: matchedPrice
                     };
-                });
+                }).filter(s => s.lat && s.lng);
 
                 stations.sort((a, b) => a.distance - b.distance);
                 listContainer.innerHTML = '';
@@ -233,13 +212,8 @@
                         `${Math.round(st.distance * 1000)} m` : 
                         `${st.distance.toFixed(1)} km`;
 
-                    const placemark = new ymaps.Placemark([st.lat, st.lng], {
-                        balloonContentHeader: st.name,
-                        balloonContentBody: `Mesafe: ${distStr}`
-                    }, {
-                        preset: 'islands#redGasStationIcon'
-                    });
-                    myMap.geoObjects.add(placemark);
+                    const marker = L.marker([st.lat, st.lng]).addTo(map);
+                    marker.bindPopup(`<b>${st.name}</b><br>Mesafe: ${distStr}`);
 
                     const card = document.createElement('div');
                     card.className = 'station-card';
@@ -249,25 +223,44 @@
                             <div class="distance-tag">📍 ${distStr}</div>
                         </div>
                         <div class="prices">
-                            <div class="price-item"><div class="price-title">BENZİN</div><div class="price-val">₺${st.prices.benzin}</div></div>
-                            <div class="price-item"><div class="price-title">MOTORİN</div><div class="price-val">₺${st.prices.motorin}</div></div>
-                            <div class="price-item"><div class="price-title">LPG</div><div class="price-val">₺${st.prices.lpg}</div></div>
+                            <div class="price-item"><div class="price-title">BENZİN</div><div class="price-val">₺${st.prices.benzin || '-'}</div></div>
+                            <div class="price-item"><div class="price-title">MOTORİN</div><div class="price-val">₺${st.prices.motorin || '-'}</div></div>
+                            <div class="price-item"><div class="price-title">LPG</div><div class="price-val">₺${st.prices.lpg || '-'}</div></div>
                         </div>
-                        <button class="nav-btn" onclick="startNavigation(${st.lat}, ${st.lng})">
-                           🚀 Yandex ile Rota Başlat
+                        <button class="nav-btn" onclick="startGoogleMapsNavigation(${st.lat}, ${st.lng})">
+                           🚀 Google Haritalar'da Rota Başlat
                         </button>
                     `;
                     listContainer.appendChild(card);
                 });
-            }).catch((err) => {
-                console.error("Yandex Arama Hatası:", err);
-            });
+
+            } catch (err) {
+                console.error("Yükleme hatası:", err);
+            }
         }
 
-        const script = document.createElement('script');
-        script.src = `https://api-maps.yandex.ru/2.1/?apikey=${YANDEX_API_KEY}&lang=tr_TR`;
-        script.onload = initYandexMap;
-        document.head.appendChild(script);
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    userLat = pos.coords.latitude;
+                    userLng = pos.coords.longitude;
+                    map.setView([userLat, userLng], 13);
+                    L.circle([userLat, userLng], {
+                        color: '#1976d2',
+                        fillColor: '#2196f3',
+                        fillOpacity: 0.4,
+                        radius: 300
+                    }).addTo(map);
+                    fetchNearbyStationsLive(userLat, userLng);
+                },
+                (err) => {
+                    fetchNearbyStationsLive(userLat, userLng);
+                },
+                { enableHighAccuracy: true, timeout: 8000 }
+            );
+        } else {
+            fetchNearbyStationsLive(userLat, userLng);
+        }
     </script>
 </body>
 </html>
