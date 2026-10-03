@@ -3,12 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Canlı Akaryakıt Bulucu</title>
+    <title>Yandex ile Canlı Akaryakıt Bulucu</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#1976d2">
-    
-    <!-- Leaflet Harita CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
     <style>
         body {
@@ -99,18 +96,17 @@
 </head>
 <body>
 
-    <header>⛽ Canlı Akaryakıt İstasyonları</header>
+    <header>⛽ Canlı Akaryakıt İstasyonları (Yandex)</header>
     
     <div id="map"></div>
 
     <div class="container" id="stations-list">
         <p style="text-align:center; color:#666; margin-top: 20px;" id="status-text">
-            📍 Konumunuz alınıyor ve yakındaki istasyonlar taranıyor...
+            📍 Yandex Harita yükleniyor ve istasyonlar aranıyor...
         </p>
     </div>
 
-    <!-- Leaflet & Supabase JS -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Supabase JS -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <script>
@@ -118,19 +114,13 @@
         const SUPABASE_KEY = "sb_publishable_atDC1UU40N7N-U-c3u__4A_mKuI2Oum";
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // Varsayılan Koordinatlar (Afyon OSB mevkii)
+        // Yandex API Anahtarınız
+        const YANDEX_API_KEY = "0c2833ab-a629-4aa3-a049-abc5e81d0119";
+
+        let myMap;
         let userLat = 38.7569;
         let userLng = 30.5387;
         let dovizPrices = {};
-
-        // Haritayı Oluştur
-        const map = L.map('map').setView([userLat, userLng], 13);
-
-        // %100 Ücretsiz OpenStreetMap Katmanı
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '&copy; OpenStreetMap'
-        }).addTo(map);
 
         function getDistanceInKm(lat1, lon1, lat2, lon2) {
             const R = 6371; 
@@ -142,11 +132,10 @@
             return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
         }
 
-        function startGoogleMapsNavigation(lat, lng) {
-            window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, '_blank');
+        function startNavigation(lat, lng) {
+            window.open(`https://yandex.com.tr/harita/?rtext=~${lat},${lng}&rtt=auto`, '_blank');
         }
 
-        // Supabase Fiyat Verileri
         async function fetchPrices() {
             try {
                 const { data } = await supabaseClient.from('doviz_prices').select('*');
@@ -158,138 +147,127 @@
                     });
                 }
             } catch (e) {
-                console.warn("Fiyat çekilemedi:", e);
+                console.warn("Fiyat verisi alınamadı:", e);
             }
         }
 
-        // Çeşitli Sunuculardan İstasyon Sorgulama (Yedekli Yapı)
-        async function fetchNearbyStationsLive(lat, lng) {
-            const listContainer = document.getElementById('stations-list');
-            await fetchPrices();
-
-            // 3 Farklı Overpass Ayna (Mirror) Sunucusu
-            const endpoints = [
-                "https://overpass-api.de/api/interpreter",
-                "https://overpass.kumi.systems/api/interpreter",
-                "https://maps.mail.ru/osm/tools/overpass/api/interpreter"
-            ];
-
-            const query = `[out:json][timeout:10];(node["amenity"="fuel"](around:10000,${lat},${lng});way["amenity"="fuel"](around:10000,${lat},${lng}););out center 20;`;
-
-            let rawElements = [];
-            
-            for (let url of endpoints) {
-                try {
-                    const res = await fetch(url, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                        body: 'data=' + encodeURIComponent(query)
-                    });
-                    if (res.ok) {
-                        const json = await res.json();
-                        if (json.elements && json.elements.length > 0) {
-                            rawElements = json.elements;
-                            break; // Başarılı olursa döngüden çık
-                        }
-                    }
-                } catch (e) {
-                    console.warn(`Sunucu hatası (${url}):`, e);
+        function initYandexMap() {
+            ymaps.ready(() => {
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(
+                        (pos) => {
+                            userLat = pos.coords.latitude;
+                            userLng = pos.coords.longitude;
+                            loadMapAndSearch();
+                        },
+                        (err) => {
+                            console.warn("GPS alınamadı, varsayılan alan yükleniyor.", err);
+                            loadMapAndSearch();
+                        },
+                        { enableHighAccuracy: true, timeout: 8000 }
+                    );
+                } else {
+                    loadMapAndSearch();
                 }
-            }
-
-            // Eğer API sunucuları yanıt vermezse yedek (fallback) verileri yükle
-            if (rawElements.length === 0) {
-                rawElements = [
-                    { lat: lat + 0.008, lon: lng + 0.005, tags: { brand: "Shell" } },
-                    { lat: lat - 0.006, lon: lng - 0.007, tags: { brand: "Opet" } },
-                    { lat: lat + 0.012, lon: lng - 0.003, tags: { brand: "Petrol Ofisi" } },
-                    { lat: lat - 0.010, lon: lng + 0.009, tags: { brand: "BP" } }
-                ];
-            }
-
-            let stations = rawElements.map(item => {
-                const stLat = item.lat || (item.center && item.center.lat);
-                const stLng = item.lon || (item.center && item.center.lon);
-                const stName = (item.tags && (item.tags.brand || item.tags.name)) || 'Akaryakıt İstasyonu';
-                const dist = getDistanceInKm(lat, lng, stLat, stLng);
-                
-                let matchedPrice = { benzin: '43.25', motorin: '43.50', lpg: '22.10' };
-                const upperName = stName.toUpperCase();
-                for (let b in dovizPrices) {
-                    if (upperName.includes(b) || b.includes(upperName)) {
-                        matchedPrice = dovizPrices[b];
-                        break;
-                    }
-                }
-
-                return {
-                    name: stName,
-                    lat: stLat,
-                    lng: stLng,
-                    distance: dist,
-                    prices: matchedPrice
-                };
-            }).filter(s => s.lat && s.lng);
-
-            stations.sort((a, b) => a.distance - b.distance);
-            listContainer.innerHTML = '';
-
-            stations.forEach(st => {
-                const distStr = st.distance < 1 ? 
-                    `${Math.round(st.distance * 1000)} m` : 
-                    `${st.distance.toFixed(1)} km`;
-
-                // Pini Haritaya Ekle
-                const marker = L.marker([st.lat, st.lng]).addTo(map);
-                marker.bindPopup(`<b>${st.name}</b><br>Mesafe: ${distStr}`);
-
-                // Kart Oluştur
-                const card = document.createElement('div');
-                card.className = 'station-card';
-                card.innerHTML = `
-                    <div class="station-header">
-                        <div class="station-name">${st.name}</div>
-                        <div class="distance-tag">📍 ${distStr}</div>
-                    </div>
-                    <div class="prices">
-                        <div class="price-item"><div class="price-title">BENZİN</div><div class="price-val">₺${st.prices.benzin}</div></div>
-                        <div class="price-item"><div class="price-title">MOTORİN</div><div class="price-val">₺${st.prices.motorin}</div></div>
-                        <div class="price-item"><div class="price-title">LPG</div><div class="price-val">₺${st.prices.lpg}</div></div>
-                    </div>
-                    <button class="nav-btn" onclick="startGoogleMapsNavigation(${st.lat}, ${st.lng})">
-                       🚀 Google Haritalar'da Rota Başlat
-                    </button>
-                `;
-                listContainer.appendChild(card);
             });
         }
 
-        // GPS Konum Sorgulama
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                    userLat = pos.coords.latitude;
-                    userLng = pos.coords.longitude;
-                    
-                    map.setView([userLat, userLng], 13);
-                    L.circle([userLat, userLng], {
-                        color: '#1976d2',
-                        fillColor: '#2196f3',
-                        fillOpacity: 0.4,
-                        radius: 300
-                    }).addTo(map).bindPopup("Mevcut Konumunuz");
+        async function loadMapAndSearch() {
+            await fetchPrices();
 
-                    fetchNearbyStationsLive(userLat, userLng);
-                },
-                (err) => {
-                    console.warn("GPS izni alınamadı:", err);
-                    fetchNearbyStationsLive(userLat, userLng);
-                },
-                { enableHighAccuracy: true, timeout: 8000 }
-            );
-        } else {
-            fetchNearbyStationsLive(userLat, userLng);
+            myMap = new ymaps.Map("map", {
+                center: [userLat, userLng],
+                zoom: 13,
+                controls: ['zoomControl', 'geolocationControl']
+            });
+
+            const userPlacemark = new ymaps.Placemark([userLat, userLng], {
+                hintContent: 'Mevcut Konumunuz'
+            }, {
+                preset: 'islands#blueCircleDotIcon'
+            });
+            myMap.geoObjects.add(userPlacemark);
+
+            ymaps.search('benzin istasyonu', {
+                boundedBy: myMap.getBounds(),
+                results: 20
+            }).then((res) => {
+                const listContainer = document.getElementById('stations-list');
+                const geoObjects = res.geoObjects.toArray();
+
+                if (geoObjects.length === 0) {
+                    listContainer.innerHTML = '<p style="text-align:center; color:#666;">Yakında akaryakıt istasyonu bulunamadı.</p>';
+                    return;
+                }
+
+                let stations = geoObjects.map(obj => {
+                    const coords = obj.geometry.getCoordinates();
+                    const stLat = coords[0];
+                    const stLng = coords[1];
+                    const stName = obj.properties.get('name') || 'Akaryakıt İstasyonu';
+                    const dist = getDistanceInKm(userLat, userLng, stLat, stLng);
+
+                    let matchedPrice = { benzin: '43.25', motorin: '43.50', lpg: '22.10' };
+                    const upperName = stName.toUpperCase();
+                    for (let b in dovizPrices) {
+                        if (upperName.includes(b) || b.includes(upperName)) {
+                            matchedPrice = dovizPrices[b];
+                            break;
+                        }
+                    }
+
+                    return {
+                        name: stName,
+                        lat: stLat,
+                        lng: stLng,
+                        distance: dist,
+                        prices: matchedPrice
+                    };
+                });
+
+                stations.sort((a, b) => a.distance - b.distance);
+                listContainer.innerHTML = '';
+
+                stations.forEach(st => {
+                    const distStr = st.distance < 1 ? 
+                        `${Math.round(st.distance * 1000)} m` : 
+                        `${st.distance.toFixed(1)} km`;
+
+                    const placemark = new ymaps.Placemark([st.lat, st.lng], {
+                        balloonContentHeader: st.name,
+                        balloonContentBody: `Mesafe: ${distStr}`
+                    }, {
+                        preset: 'islands#redGasStationIcon'
+                    });
+                    myMap.geoObjects.add(placemark);
+
+                    const card = document.createElement('div');
+                    card.className = 'station-card';
+                    card.innerHTML = `
+                        <div class="station-header">
+                            <div class="station-name">${st.name}</div>
+                            <div class="distance-tag">📍 ${distStr}</div>
+                        </div>
+                        <div class="prices">
+                            <div class="price-item"><div class="price-title">BENZİN</div><div class="price-val">₺${st.prices.benzin}</div></div>
+                            <div class="price-item"><div class="price-title">MOTORİN</div><div class="price-val">₺${st.prices.motorin}</div></div>
+                            <div class="price-item"><div class="price-title">LPG</div><div class="price-val">₺${st.prices.lpg}</div></div>
+                        </div>
+                        <button class="nav-btn" onclick="startNavigation(${st.lat}, ${st.lng})">
+                           🚀 Yandex ile Rota Başlat
+                        </button>
+                    `;
+                    listContainer.appendChild(card);
+                });
+            }).catch((err) => {
+                console.error("Yandex Arama Hatası:", err);
+            });
         }
+
+        const script = document.createElement('script');
+        script.src = `https://api-maps.yandex.ru/2.1/?apikey=${YANDEX_API_KEY}&lang=tr_TR`;
+        script.onload = initYandexMap;
+        document.head.appendChild(script);
     </script>
 </body>
 </html>
