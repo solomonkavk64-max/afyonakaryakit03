@@ -14,7 +14,7 @@
         .station-title { font-size: 16px; font-weight: bold; color: #1976d2; margin-bottom: 8px; }
         .prices { display: flex; justify-content: space-around; background: #f8f9fa; padding: 10px; border-radius: 8px; margin-top: 10px; font-size: 14px; }
         .price-val { font-weight: bold; color: #d32f2f; }
-        .nav-btn { display: block; width: 100%; background: #2e7d32; color: white; padding: 12px; text-align: center; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 14px; margin-top: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .copy-btn { display: block; width: 100%; background: #2e7d32; color: white; padding: 12px; text-align: center; border: none; border-radius: 8px; font-weight: bold; font-size: 14px; margin-top: 12px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
     </style>
 </head>
 <body>
@@ -22,8 +22,8 @@
     <header>⛽ Akaryakıt İstasyonları</header>
 
     <div class="container">
-        <button class="gps-btn" onclick="getLocation()">📍 Konumumu Al ve Fiyatları Getir</button>
-        <div id="status" class="status">Konum bekleniyor... Lütfen butona basın.</div>
+        <button class="gps-btn" onclick="getLocation()">📍 GPS Konumumu Yenile</button>
+        <div id="status" class="status">Konum bekleniyor...</div>
         <div id="list"></div>
     </div>
 
@@ -44,24 +44,24 @@
 
         function getLocation() {
             const status = document.getElementById('status');
-            status.innerHTML = "GPS konumunuz alınıyor...";
+            status.innerHTML = "GPS uydularından konum alınıyor...";
             
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
                     (pos) => {
                         currentLat = pos.coords.latitude;
                         currentLng = pos.coords.longitude;
-                        status.innerHTML = `✅ Konum Alındı: ${currentLat.toFixed(4)}, ${currentLng.toFixed(4)}`;
+                        status.innerHTML = `✅ Konumunuz: ${currentLat.toFixed(6)}, ${currentLng.toFixed(6)}`;
                         status.style.color = "#2e7d32";
                         
                         loadPrices();
                     },
                     (err) => {
-                        status.innerHTML = "⚠️ Konum alınamadı, varsayılan merkez kullanılıyor.";
+                        status.innerHTML = "⚠️ Konum alınamadı. Telefonunuzun konum iznini kontrol edin.";
                         status.style.color = "#d32f2f";
                         loadPrices();
                     },
-                    { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+                    { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
                 );
             } else {
                 status.innerHTML = "Cihazınız konum desteklemiyor.";
@@ -82,8 +82,7 @@
                 if (data && data.length > 0) {
                     data.forEach(item => {
                         const brandName = item.brand || 'İstasyon';
-                        // Doğrudan telefonun harita uygulamasını tetikleyen güvenli intent yönlendirmesi
-                        const mapIntentUrl = `intent://www.google.com/maps/search/?api=1&query=${currentLat},${currentLng}#Intent;package=com.google.android.apps.maps;scheme=https;end;`;
+                        const coordText = `${currentLat.toFixed(6)}, ${currentLng.toFixed(6)}`;
 
                         list.innerHTML += `
                             <div class="card">
@@ -93,7 +92,7 @@
                                     <div>Motorin: <span class="price-val">₺${item.motorin || '-'}</span></div>
                                     <div>LPG: <span class="price-val">₺${item.lpg || '-'}</span></div>
                                 </div>
-                                <a class="nav-btn" href="${mapIntentUrl}">🚀 Harita Uygulamasında Rota Aç</a>
+                                <button class="copy-btn" onclick="navigator.clipboard.writeText('${coordText}'); alert('Koordinat kopyalandı: ${coordText}');">📋 Konum Koordinatını Kopyala</button>
                             </div>
                         `;
                     });
