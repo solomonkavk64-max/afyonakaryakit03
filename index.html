@@ -10,8 +10,8 @@
         header { background: #1976d2; color: white; padding: 14px; text-align: center; font-weight: bold; }
         #map { height: 250px; width: 100%; }
         .container { padding: 12px; }
-        .gps-btn { width: 100%; background: #d32f2f; color: white; padding: 14px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: 10px; }
-        .status { text-align: center; font-size: 13px; font-weight: bold; margin-bottom: 10px; }
+        .gps-btn { width: 100%; background: #d32f2f; color: white; padding: 14px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .status { text-align: center; font-size: 13px; font-weight: bold; margin-bottom: 10px; color: #333; }
         .card { background: white; border-radius: 10px; padding: 14px; margin-bottom: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         .prices { display: flex; justify-content: space-around; background: #f8f9fa; padding: 8px; border-radius: 6px; margin-top: 8px; }
         .price-val { font-weight: bold; color: #d32f2f; }
@@ -24,7 +24,7 @@
     <div id="map"></div>
 
     <div class="container">
-        <button class="gps-btn" onclick="getLocation()">📍 Konumu Sabitle ve Getir</button>
+        <button class="gps-btn" onclick="getLocation()">📍 Konumu Al ve Güncelle</button>
         <div id="status" class="status">Konum bekleniyor...</div>
         <div id="list"></div>
     </div>
@@ -49,8 +49,10 @@
         function initMap(lat, lng) {
             if (!map) {
                 map = L.map('map').setView([lat, lng], 15);
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    maxZoom: 19
+                // Engellenmeyen güvenli CartoDB harita katmanı kullanıldı
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                    maxZoom: 19,
+                    attribution: '&copy; CartoDB'
                 }).addTo(map);
             } else {
                 map.setView([lat, lng], 16);
@@ -59,32 +61,34 @@
             if (marker) {
                 marker.setLatLng([lat, lng]);
             } else {
-                marker = L.marker([lat, lng]).addTo(map).bindPopup("Seçilen Konum");
+                marker = L.marker([lat, lng]).addTo(map).bindPopup("Konumunuz");
             }
         }
 
         function getLocation() {
             const status = document.getElementById('status');
-            status.innerHTML = "Konum alınıyor...";
+            status.innerHTML = "GPS uydularından konum alınıyor...";
             
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
                     (pos) => {
                         const lat = pos.coords.latitude;
                         const lng = pos.coords.longitude;
-                        status.innerHTML = `✅ Konum Sabitlendi: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+                        status.innerHTML = `✅ Konum Güncellendi: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
                         status.style.color = "#2e7d32";
                         
                         initMap(lat, lng);
                         loadPrices(lat, lng);
                     },
                     (err) => {
-                        status.innerHTML = "⚠️ Konum alınamadı, varsayılan merkez kullanılıyor.";
+                        status.innerHTML = "⚠️ Konum alınamadı. Lütfen GPS'inizi açık tutup tekrar deneyin.";
                         status.style.color = "#d32f2f";
                         loadPrices(38.7569, 30.5387);
                     },
-                    { enableHighAccuracy: false, timeout: 10000 }
+                    { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
                 );
+            } else {
+                status.innerHTML = "Cihazınız konum desteklemiyor.";
             }
         }
 
@@ -93,8 +97,10 @@
             list.innerHTML = "Fiyatlar yükleniyor...";
 
             try {
-                const { data } = await supabaseClient.from('doviz_prices').select('*');
+                const { data, error } = await supabaseClient.from('doviz_prices').select('*');
                 list.innerHTML = '';
+
+                if (error) throw error;
 
                 if (data && data.length > 0) {
                     data.forEach(item => {
@@ -114,7 +120,7 @@
                     list.innerHTML = "Kayıtlı fiyat bulunamadı.";
                 }
             } catch (e) {
-                list.innerHTML = "Bağlantı hatası.";
+                list.innerHTML = "Veriler yüklenirken bir hata oluştu.";
             }
         }
     </script>
