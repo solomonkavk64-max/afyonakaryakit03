@@ -75,6 +75,8 @@
             text-decoration: none;
             font-weight: bold;
             font-size: 15px;
+            border: none;
+            cursor: pointer;
         }
     </style>
 </head>
@@ -102,20 +104,21 @@
         // Haritayı Afyonkarahisar merkezli başlat
         const map = L.map('map').setView([38.7569, 30.5387], 12);
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap'
+        // Engellenmeyen CARTO Katmanı (Hızlı ve Temiz Görünüm)
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+            subdomains: 'abcd',
+            maxZoom: 19
         }).addTo(map);
 
-        // Cihazın Android/iOS durumuna göre doğrudan harita uygulamasını tetikleyen fonksiyon
-        function openNativeMaps(lat, lng, name) {
+        // Doğrudan Haritalar Uygulamasını ve Navigasyonu Başlatan Fonksiyon
+        function openNativeMaps(lat, lng) {
             const isAndroid = /Android/i.test(navigator.userAgent);
-            const label = encodeURIComponent(name || 'Akaryakıt İstasyonu');
-
+            
             if (isAndroid) {
-                // Android için doğrudan Google Haritalar uygulamasını açma isteği (Intent / Geo)
-                window.location.href = `geo:${lat},${lng}?q=${lat},${lng}(${label})`;
+                // Play Store yerine doğrudan Haritalar uygulamasında rotayı açar
+                window.location.href = `intent://maps.google.com/maps?daddr=${lat},${lng}#Intent;scheme=https;package=com.google.android.apps.maps;end`;
             } else {
-                // iOS veya Masaüstü Web için harita linki
                 window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, '_blank');
             }
         }
@@ -144,7 +147,7 @@
 
                 // Haritaya Pin Ekle
                 const marker = L.marker([lat, lng]).addTo(map);
-                marker.bindPopup(`<b>${name}</b><br>Benzin: ₺${station.benzin || '-'}<br><a href="javascript:void(0)" onclick="openNativeMaps(${lat}, ${lng}, '${name}')">Google Haritalar'da Aç</a>`);
+                marker.bindPopup(`<b>${name}</b><br>Benzin: ₺${station.benzin || '-'}<br><button onclick="openNativeMaps(${lat}, ${lng})" style="margin-top:5px; background:#388e3c; color:white; border:none; padding:5px 10px; border-radius:3px;">Yol Tarifi Al</button>`);
 
                 // Liste Kartı Oluştur
                 const card = document.createElement('div');
@@ -157,9 +160,9 @@
                         <div class="price-item"><div class="price-title">MOTORİN</div><div class="price-val">₺${station.motorin || '-'}</div></div>
                         <div class="price-item"><div class="price-title">LPG</div><div class="price-val">₺${station.lpg || '-'}</div></div>
                     </div>
-                    <a class="nav-btn" href="javascript:void(0)" onclick="openNativeMaps(${lat}, ${lng}, '${name}')">
+                    <button class="nav-btn" onclick="openNativeMaps(${lat}, ${lng})">
                        📍 Google Haritalar'da Yol Tarifi Al
-                    </a>
+                    </button>
                 `;
                 listContainer.appendChild(card);
             });
