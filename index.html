@@ -103,7 +103,7 @@
 
     <div class="container" id="stations-list">
         <p style="text-align:center; color:#666; margin-top: 20px;" id="status-text">
-            📍 Konum alınıyor ve istasyonlar taranıyor...
+            📍 Canlı GPS konumu bekleniyor... Lütfen konum izni verin.
         </p>
     </div>
 
@@ -117,10 +117,11 @@
         const SUPABASE_KEY = "sb_publishable_atDC1UU40N7N-U-c3u__4A_mKuI2Oum";
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        let map;
-        let userLat = 38.7569;
-        let userLng = 30.5387;
+        let map = null;
+        let userMarker = null;
+        let stationMarkers = [];
         let dovizPrices = {};
+        let isFirstLocation = true;
 
         function getDistanceInKm(lat1, lon1, lat2, lon2) {
             const R = 6371; 
@@ -152,83 +153,70 @@
         }
 
         async function fetchNearbyStations(lat, lng) {
-            const radius = 25000; // 25 km geniş yarıçap
+            const radius = 25000; // 25 km
             const query = `
-                [out:json][timeout:25];
+                [out:json][timeout:20];
                 (
                   node["amenity"="fuel"](around:${radius},${lat},${lng});
                   way["amenity"="fuel"](around:${radius},${lat},${lng});
-                  node["building"="fuel"](around:${radius},${lat},${lng});
-                  way["building"="fuel"](around:${radius},${lat},${lng});
                 );
                 out center;
             `;
             
-            // Yedekli Overpass Sunucu Listesi
-            const endpoints = [
-                "https://overpass.kumi.systems/api/interpreter",
-                "https://overpass-api.de/api/interpreter",
-                "https://maps.mail.ru/osm/tools/overpass/api/interpreter"
-            ];
-
-            for (let ep of endpoints) {
-                try {
-                    const response = await fetch(ep + "?data=" + encodeURIComponent(query));
-                    if (response.ok) {
-                        const data = await response.json();
-                        if (data.elements && data.elements.length > 0) {
-                            return data.elements;
-                        }
-                    }
-                } catch (e) {
-                    console.warn(`${ep} yanıt vermedi, sonraki sunucuya geçiliyor...`);
+            try {
+                const response = await fetch("https://overpass.kumi.systems/api/interpreter?data=" + encodeURIComponent(query));
+                if (response.ok) {
+                    const data = await response.json();
+                    return data.elements || [];
                 }
+            } catch (e) {
+                console.warn("Overpass hatası:", e);
             }
             return [];
         }
 
-        async function initApp() {
-            await fetchPrices();
+        function initMap(lat, lng) {
+            map = L.map('map').setView([lat, lng], 13);
 
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    (pos) => {
-                        userLat = pos.coords.latitude;
-                        userLng = pos.coords.longitude;
-                        renderMapAndStations();
-                    },
-                    (err) => {
-                        console.warn("Konum alınamadı, varsayılan konum gösteriliyor.", err);
-                        renderMapAndStations();
-                    },
-                    { enableHighAccuracy: true, timeout: 8000 }
-                );
-            } else {
-                renderMapAndStations();
-            }
-        }
-
-        async function renderMapAndStations() {
-            map = L.map('map').setView([userLat, userLng], 12);
-
-            // Yandex Katmanı
             L.tileLayer('https://core-renderer-tiles.maps.yandex.net/tiles?l=map&v=21.06.18-0&x={x}&y={y}&z={z}&scale=1&lang=tr_TR', {
                 maxZoom: 19,
                 attribution: '&copy; Yandex'
             }).addTo(map);
 
-            // Kullanıcı Pini
-            L.circleMarker([userLat, userLng], {
-                radius: 8,
+            userMarker = L.circleMarker([lat, lng], {
+                radius: 9,
                 fillColor: "#1976d2",
                 color: "#fff",
                 weight: 3,
                 opacity: 1,
                 fillOpacity: 0.9
-            }).addTo(map).bindPopup("Mevcut Konumunuz");
+            }).addTo(map).bindPopup("Canlı Konumunuz");
+        }
 
-            const elements = await fetchNearbyStations(userLat, userLng);
+        async function handlePositionUpdate(position) {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+
+            if (!map) {
+                initMap(lat, lng);
+            } else {
+                userMarker.setLatLng([lat, lng]);
+                if (isFirstLocation) {
+                    map.setView([lat, lng], 13);
+                    isFirstLocation = false;
+                }
+            }
+
+            await loadStations(lat, lng);
+        }
+
+        async function loadStations(lat, lng) {
             const listContainer = document.getElementById('stations-list');
+            const elements = await fetchNearbyStations(lat, lng);
+
+            // Eski pinleri temizle
+            stationMarkers.forEach(m => map.removeLayer(m));
+            stationMarkers = [];
 
             if (!elements || elements.length === 0) {
                 listContainer.innerHTML = '<p style="text-align:center; color:#666;">Yakınınızda akaryakıt istasyonu bulunamadı.</p>';
@@ -239,7 +227,7 @@
                 const stLat = item.lat || (item.center && item.center.lat);
                 const stLng = item.lon || (item.center && item.center.lon);
                 const stName = (item.tags && (item.tags.brand || item.tags.name)) || "Akaryakıt İstasyonu";
-                const dist = getDistanceInKm(userLat, userLng, stLat, stLng);
+                const dist = getDistanceInKm(lat, lng, stLat, stLng);
 
                 let matchedPrice = { benzin: '84.60', motorin: '95.00', lpg: '41.96' };
                 const upperName = stName.toUpperCase();
@@ -267,8 +255,9 @@
                     `${Math.round(st.distance * 1000)} m` : 
                     `${st.distance.toFixed(1)} km`;
 
-                L.marker([st.lat, st.lng]).addTo(map)
+                const marker = L.marker([st.lat, st.lng]).addTo(map)
                     .bindPopup(`<b>${st.name}</b><br>Mesafe: ${distStr}`);
+                stationMarkers.push(marker);
 
                 const card = document.createElement('div');
                 card.className = 'station-card';
@@ -288,6 +277,28 @@
                 `;
                 listContainer.appendChild(card);
             });
+        }
+
+        async function initApp() {
+            await fetchPrices();
+
+            if (navigator.geolocation) {
+                // CANLI TAKİP: watchPosition ile konum her değiştiğinde tetiklenir
+                navigator.geolocation.watchPosition(
+                    handlePositionUpdate,
+                    (err) => {
+                        console.warn("GPS Hatası:", err);
+                        document.getElementById('status-text').innerText = "⚠️ Lütfen telefon ayarlarından cihazınızın ve uygulamanın konum erişimine izin verin.";
+                    },
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 15000,
+                        maximumAge: 0
+                    }
+                );
+            } else {
+                document.getElementById('status-text').innerText = "Cihazınız konum servisini desteklemiyor.";
+            }
         }
 
         window.onload = initApp;
