@@ -26,7 +26,7 @@
             font-weight: bold;
         }
         #map {
-            height: 300px;
+            height: 320px;
             width: 100%;
         }
         .container {
@@ -85,18 +85,19 @@
     <div id="map"></div>
 
     <div class="container" id="stations-list">
-        <!-- İstasyonlar JS ile yüklenecek -->
+        <p style="text-align:center; color:#666;">İstasyonlar yükleniyor...</p>
     </div>
 
-    <!-- Leaflet JS -->
+    <!-- Leaflet JS & Supabase Client -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <script>
-        // Supabase Kurulumu (Kendi Supabase bilgilerinizi yazın)
-        const SUPABASE_URL = "https://xxxxxxxx.supabase.co"; 
-        const SUPABASE_KEY = "public-anon-key-buraya"; 
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        // Supabase Bağlantı Bilgileri Entegre Edildi
+        const SUPABASE_URL = "https://dzapuhihjzdmzvwzcxht.supabase.co";
+        const SUPABASE_KEY = "sb_publishable_atDC1UU40N7N-U-c3u__4A_mKuI2Oum";
+        
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         // Haritayı Afyonkarahisar merkezli başlat
         const map = L.map('map').setView([38.7569, 30.5387], 12);
@@ -106,14 +107,20 @@
         }).addTo(map);
 
         async function loadStations() {
-            const { data: stations, error } = await supabase.from('stations').select('*');
+            const { data: stations, error } = await supabaseClient.from('stations').select('*');
+            const listContainer = document.getElementById('stations-list');
             
             if (error) {
-                console.error("Hata:", error);
+                console.error("Supabase Hatası:", error);
+                listContainer.innerHTML = '<p style="text-align:center; color:red;">Veriler yüklenirken hata oluştu!</p>';
                 return;
             }
 
-            const listContainer = document.getElementById('stations-list');
+            if (!stations || stations.length === 0) {
+                listContainer.innerHTML = '<p style="text-align:center; color:#666;">Henüz eklenmiş istasyon bulunamadı.</p>';
+                return;
+            }
+
             listContainer.innerHTML = '';
 
             stations.forEach(station => {
@@ -122,18 +129,18 @@
 
                 // Haritaya Pin Ekle
                 const marker = L.marker([lat, lng]).addTo(map);
-                marker.bindPopup(`<b>${station.name}</b><br>Benzin: ₺${station.benzin}<br><a href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}" target="_blank">Google Haritada Aç</a>`);
+                marker.bindPopup(`<b>${station.name}</b><br>Benzin: ₺${station.benzin || '-'}<br><a href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}" target="_blank">Yol Tarifi Al</a>`);
 
                 // Liste Kartı Oluştur
                 const card = document.createElement('div');
                 card.className = 'station-card';
                 card.innerHTML = `
                     <div class="station-name">${station.name}</div>
-                    <div style="font-size:12px; color:#777;">${station.address || 'Afyonkarahisar'}</div>
+                    <div style="font-size:12px; color:#777; margin-top:3px;">${station.address || 'Afyonkarahisar'}</div>
                     <div class="prices">
-                        <div class="price-item"><div class="price-title">BENZİN</div><div class="price-val">₺${station.benzin}</div></div>
-                        <div class="price-item"><div class="price-title">MOTORİN</div><div class="price-val">₺${station.motorin}</div></div>
-                        <div class="price-item"><div class="price-title">LPG</div><div class="price-val">₺${station.lpg}</div></div>
+                        <div class="price-item"><div class="price-title">BENZİN</div><div class="price-val">₺${station.benzin || '-'}</div></div>
+                        <div class="price-item"><div class="price-title">MOTORİN</div><div class="price-val">₺${station.motorin || '-'}</div></div>
+                        <div class="price-item"><div class="price-title">LPG</div><div class="price-val">₺${station.lpg || '-'}</div></div>
                     </div>
                     <a class="nav-btn" href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}" target="_blank">
                        📍 Google Haritalar'da Yol Tarifi Al
