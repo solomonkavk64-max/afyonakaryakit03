@@ -18,28 +18,39 @@
         header {
             background-color: #1976d2;
             color: white;
-            padding: 16px;
+            padding: 14px;
             text-align: center;
-            font-size: 18px;
+            font-size: 17px;
             font-weight: bold;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         #map {
-            height: 250px;
+            height: 240px;
             width: 100%;
         }
         .container {
             padding: 12px;
         }
-        .gps-status-box {
-            background-color: #e3f2fd;
-            color: #1565c0;
-            padding: 12px;
+        .gps-btn {
+            display: block;
+            width: 100%;
+            background-color: #d32f2f;
+            color: white;
+            padding: 14px;
+            border: none;
             border-radius: 8px;
-            text-align: center;
+            font-size: 16px;
             font-weight: bold;
-            margin-bottom: 12px;
-            font-size: 14px;
+            cursor: pointer;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status-text {
+            text-align: center;
+            color: #333;
+            font-size: 13px;
+            margin-bottom: 10px;
+            font-weight: bold;
         }
         .station-card {
             background: white;
@@ -112,13 +123,10 @@
     <div id="map"></div>
 
     <div class="container">
-        <div id="gps-status" class="gps-status-box">🔄 Canlı GPS konumu bekleniyor...</div>
+        <button class="gps-btn" onclick="forceGetLocation()">📍 Konumumu Canlı Al ve Güncelle</button>
+        <div id="gps-status" class="status-text">Lütfen yukarıdaki butona tıklayarak GPS izni verin.</div>
         
-        <div id="stations-list">
-            <p style="text-align:center; color:#666; margin-top: 10px;">
-                Konumunuz alındığında en yakın istasyonlar otomatik listelenecektir.
-            </p>
-        </div>
+        <div id="stations-list"></div>
     </div>
 
     <!-- Leaflet JS -->
@@ -135,13 +143,13 @@
         let userMarker = null;
         let stationMarkers = [];
         let dovizPrices = {};
-        let isFirstLocation = true;
-        let watchId = null;
 
         window.onload = async function() {
             await fetchPrices();
-            initMap(38.7569, 30.5387); // Varsayılan başlangıç
-            startLiveLocationTracking();
+            // Başlangıç haritası (Afyonkarahisar merkez)
+            initMap(38.7569, 30.5387);
+            // Otomatik konum çekmeyi dene
+            forceGetLocation();
         };
 
         function initMap(lat, lng) {
@@ -151,6 +159,8 @@
                     maxZoom: 19,
                     attribution: '&copy; Yandex'
                 }).addTo(map);
+            } else {
+                map.setView([lat, lng], 15);
             }
 
             if (userMarker) {
@@ -167,38 +177,35 @@
             }
         }
 
-        function startLiveLocationTracking() {
-            const statusBox = document.getElementById('gps-status');
+        function forceGetLocation() {
+            const statusEl = document.getElementById('gps-status');
+            statusEl.innerHTML = "🔄 GPS uydularına bağlanılıyor, lütfen bekleyin...";
+            statusEl.style.color = "#1976d2";
 
             if (navigator.geolocation) {
-                // watchPosition ile hareket ettikçe anlık tetiklenir
-                watchId = navigator.geolocation.watchPosition(
+                navigator.geolocation.getCurrentPosition(
                     async (position) => {
                         const lat = position.coords.latitude;
                         const lng = position.coords.longitude;
                         
-                        statusBox.innerHTML = `✅ Canlı Konum Aktif (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
-                        
+                        statusEl.innerHTML = `✅ Konum Alındı: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+                        statusEl.style.color = "#2e7d32";
+
                         initMap(lat, lng);
-                        
-                        if (isFirstLocation) {
-                            map.setView([lat, lng], 15);
-                            await loadStations(lat, lng);
-                            isFirstLocation = false;
-                        }
+                        await loadStations(lat, lng);
                     },
                     (error) => {
-                        console.warn("GPS hatası:", error);
-                        statusBox.innerHTML = "⚠️ Konum alınamadı! Lütfen GPS ve uygulama izinlerini kontrol edin.";
+                        console.warn("GPS Hatası:", error);
+                        statusEl.innerHTML = "⚠️ Konum alınamadı! Lütfen telefonunuzun GPS ve Uygulama Konum İzinlerini açık olduğundan emin olun.";
+                        statusEl.style.color = "#d32f2f";
+                        
+                        // Hata alsa bile mevcut veritabanı fiyatlarını göster
+                        loadStations(38.7569, 30.5387);
                     },
-                    { 
-                        enableHighAccuracy: true, 
-                        timeout: 20000, 
-                        maximumAge: 0 // Eski önbelleğe alınmış konumu reddeder, anlık GPS ister
-                    }
+                    { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
                 );
             } else {
-                statusBox.innerHTML = "Cihazınız canlı konumu desteklemiyor.";
+                statusEl.innerHTML = "Cihazınız konum servislerini desteklemiyor.";
             }
         }
 
@@ -231,8 +238,7 @@
             
             const endpoints = [
                 "https://overpass-api.de/api/interpreter",
-                "https://overpass.kumi.systems/api/interpreter",
-                "https://maps.mail.ru/osm/tools/overpass/api/interpreter"
+                "https://overpass.kumi.systems/api/interpreter"
             ];
 
             for (let ep of endpoints) {
@@ -271,8 +277,9 @@
 
             let elements = await fetchNearbyStations(lat, lng);
 
+            // Eğer harita servisi boş dönerse Supabase'deki kayıtlı markaları listele (Kullanıcı boş ekran görmez)
             if (!elements || elements.length === 0) {
-                listContainer.innerHTML = '<p style="text-align:center; color:#d32f2f;">Harita sunucusundan istasyon alınamadı. Supabase fiyat listesinden gösteriliyor:</p>';
+                listContainer.innerHTML = '<p style="text-align:center; color:#e65100; font-size:13px; font-weight:bold;">Harita üzerinden istasyon noktası alınamadı. Güncel Akaryakıt Fiyatları:</p>';
                 
                 for (let brand in dovizPrices) {
                     const pr = dovizPrices[brand];
@@ -280,8 +287,8 @@
                     card.className = 'station-card';
                     card.innerHTML = `
                         <div class="station-header">
-                            <div class="station-name">${brand} Akaryakıt İstasyonu</div>
-                            <div class="distance-tag">📍 Yakında</div>
+                            <div class="station-name">${brand} İstasyonu</div>
+                            <div class="distance-tag">📍 Fiyat Listesi</div>
                         </div>
                         <div class="prices">
                             <div class="price-item"><div class="price-title">BENZİN</div><div class="price-val">₺${pr.benzin || '-'}</div></div>
@@ -304,7 +311,7 @@
                 const stLat = item.lat || (item.center && item.center.lat);
                 const stLng = item.lon || (item.center && item.center.lon);
                 const stName = (item.tags && (item.tags.brand || item.tags.name)) || "Akaryakıt İstasyonu";
-                const dist = getDistanceInKm(lat, lon, stLat, stLng);
+                const dist = getDistanceInKm(lat, lng, stLat, stLng);
 
                 let matchedPrice = { benzin: '84.60', motorin: '95.00', lpg: '41.96' };
                 const upperName = stName.toUpperCase();
