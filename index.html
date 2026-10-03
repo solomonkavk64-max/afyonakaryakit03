@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Afyonkarahisar Akaryakıt Fiyatları ve En Yakın İstasyonlar</title>
+    <title>Afyonkarahisar Akaryakıt Fiyatları ve İstasyonlar</title>
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
@@ -19,8 +19,9 @@
         .status { text-align: center; font-size: 13px; font-weight: 600; margin-bottom: 15px; color: #475569; background: #fff; padding: 10px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
 
         .card { background: white; border-radius: 14px; padding: 16px; margin-bottom: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-left: 5px solid #2563eb; }
-        .station-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .station-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
         .station-title { font-size: 17px; font-weight: bold; color: #0f172a; }
+        .station-address { font-size: 12px; color: #64748b; margin-bottom: 10px; }
         .distance-badge { background: #e0f2fe; color: #0369a1; padding: 5px 10px; border-radius: 8px; font-size: 12px; font-weight: bold; }
         
         .prices { display: flex; justify-content: space-between; background: #f8fafc; padding: 10px; border-radius: 10px; margin-top: 10px; font-size: 13px; text-align: center; }
@@ -37,11 +38,9 @@
     <div id="map"></div>
 
     <div class="container">
-        
         <div class="action-bar">
             <button class="btn" onclick="initApp()">📍 Konumuma Göre Yeniden Sırala</button>
         </div>
-
         <div id="status" class="status">GPS konumunuz bekleniyor...</div>
         <div id="list"></div>
     </div>
@@ -49,36 +48,22 @@
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // --- AFYON MERKEZ İSTASYONLARI VE GERÇEK KOORDİNATLARI ---
+        // Görsellerden alınan gerçek adres ve fiyat verileri (lat ve lng değerlerini haritadan girerek güncelleyebilirsiniz)
         const manualStations = [
-            { brand: "Petrol Ofisi", benzin: "86.80", motorin: "97.40", lpg: "41.20", lat: 38.7584, lng: 30.5402 },
-            { brand: "Opet", benzin: "86.71", motorin: "97.31", lpg: "-", lat: 38.7492, lng: 30.5511 },
-            { brand: "Shell", benzin: "86.70", motorin: "97.30", lpg: "43.84", lat: 38.7521, lng: 30.5356 },
-            { brand: "M Oil", benzin: "86.80", motorin: "97.40", lpg: "-", lat: 38.7634, lng: 30.5289 },
-            { brand: "Aytemiz", benzin: "86.70", motorin: "97.30", lpg: "41.45", lat: 38.7445, lng: 30.5478 },
-            { brand: "Total", benzin: "86.80", motorin: "97.40", lpg: "-", lat: 38.7590, lng: 30.5320 },
-            { brand: "Kadoil", benzin: "86.80", motorin: "97.30", lpg: "43.06", lat: 38.7398, lng: 30.5612 },
-            { brand: "Lukoil", benzin: "86.80", motorin: "97.40", lpg: "-", lat: 38.7512, lng: 30.5245 },
-            { brand: "Aygaz", benzin: "-", motorin: "-", lpg: "29.72", lat: 38.7565, lng: 30.5385 },
-            { brand: "Milangaz", benzin: "-", motorin: "-", lpg: "42.28", lat: 38.7620, lng: 30.5445 },
-            { brand: "İpragaz", benzin: "-", motorin: "-", lpg: "42.45", lat: 38.7478, lng: 30.5312 },
-            { brand: "Sunpet", benzin: "86.71", motorin: "97.31", lpg: "-", lat: 38.7543, lng: 30.5490 },
-            { brand: "Go", benzin: "86.79", motorin: "97.34", lpg: "-", lat: 38.7610, lng: 30.5350 },
-            { brand: "Alpet", benzin: "86.80", motorin: "97.38", lpg: "-", lat: 38.7432, lng: 30.5398 },
-            { brand: "Enerji", benzin: "86.65", motorin: "97.26", lpg: "-", lat: 38.7501, lng: 30.5423 },
-            { brand: "Petline", benzin: "86.67", motorin: "97.19", lpg: "-", lat: 38.7555, lng: 30.5278 },
-            { brand: "BestOil", benzin: "86.90", motorin: "97.38", lpg: "-", lat: 38.7487, lng: 30.5580 },
-            { brand: "7Kita", benzin: "86.67", motorin: "97.30", lpg: "-", lat: 38.7645, lng: 30.5310 },
-            { brand: "Şahin Oil", benzin: "86.50", motorin: "95.98", lpg: "-", lat: 38.7410, lng: 30.5455 },
-            { brand: "QPlus", benzin: "86.48", motorin: "97.07", lpg: "41.40", lat: 38.7533, lng: 30.5534 },
-            { brand: "Petral", benzin: "86.62", motorin: "97.07", lpg: "-", lat: 38.7578, lng: 30.5265 },
-            { brand: "Rpet", benzin: "86.80", motorin: "97.40", lpg: "-", lat: 38.7465, lng: 30.5340 },
-            { brand: "Parkoil", benzin: "84.97", motorin: "72.22", lpg: "-", lat: 38.7602, lng: 30.5412 },
-            { brand: "Sanoil", benzin: "86.80", motorin: "97.40", lpg: "-", lat: 38.7450, lng: 30.5505 }
+            { brand: "Alpet - Saçaklar Petrol", address: "Şuhut/Afyon", benzin: "86.80", motorin: "-", lpg: "-", lat: 0, lng: 0 },
+            { brand: "Petrol Ofisi", address: "Yeşilçiftlik/Sultandağı/Afyonkarahisar", benzin: "86.80", motorin: "-", lpg: "-", lat: 0, lng: 0 },
+            { brand: "Shell", address: "Cumhuriyet/Çay/Afyonkarahisar", benzin: "86.70", motorin: "-", lpg: "-", lat: 0, lng: 0 },
+            { brand: "Shell", address: "Akören/Sinanpaşa/Afyonkarahisar", benzin: "86.70", motorin: "-", lpg: "-", lat: 0, lng: 0 },
+            { brand: "TotalEnergies", address: "Sülün Beldesi / Köyü Hisar Mah.", benzin: "-", motorin: "-", lpg: "-", lat: 0, lng: 0 },
+            { brand: "Kadoil Dilhas Petrol", address: "Akören/Sinanpaşa/Afyonkarahisar", benzin: "-", motorin: "-", lpg: "-", lat: 0, lng: 0 },
+            { brand: "Türkiye Petrolleri", address: "Atatürk Blv. No:8/3", benzin: "86.76", motorin: "-", lpg: "-", lat: 0, lng: 0 },
+            { brand: "Aytemiz", address: "Ali Çetinkaya Blv.", benzin: "-", motorin: "-", lpg: "-", lat: 0, lng: 0 },
+            { brand: "Yıldız Petrol", address: "Susuz Bld, Milli Birlik Sk.", benzin: "-", motorin: "-", lpg: "-", lat: 0, lng: 0 },
+            { brand: "BP", address: "Afyon Ankara Yolu No:17", benzin: "86.80", motorin: "-", lpg: "-", lat: 0, lng: 0 },
+            { brand: "Opet", address: "Karaca Ören/Sinanpaşa/Afyonkarahisar", benzin: "-", motorin: "-", lpg: "-", lat: 0, lng: 0 }
         ];
 
-        // Harita Katmanı (Esri Engellenmeyen Altyapı)
-        let map = L.map('map').setView([38.7569, 30.5387], 13);
+        let map = L.map('map').setView([38.7569, 30.5387], 11);
         L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
             maxZoom: 19,
             attribution: 'Tiles &copy; Esri'
@@ -96,7 +81,7 @@
             status.innerHTML = "GPS konumunuz alınıyor...";
 
             if (!navigator.geolocation) {
-                status.innerHTML = "Tarayıcınız konum desteklemiyor. Merkez baz alınıyor.";
+                status.innerHTML = "Tarayıcınız konum desteklemiyor. Afyon merkez baz alınıyor.";
                 processStations(38.7569, 30.5387);
                 return;
             }
@@ -107,14 +92,14 @@
                     const lng = pos.coords.longitude;
                     status.innerHTML = `✅ Konum alındı. İstasyonlar mesafeye göre sıralandı.`;
                     
-                    map.setView([lat, lng], 13);
+                    map.setView([lat, lng], 11);
                     if (userMarker) map.removeLayer(userMarker);
                     userMarker = L.marker([lat, lng]).addTo(map).bindPopup("<b>Buradasınız</b>").openPopup();
 
                     processStations(lat, lng);
                 },
                 (err) => {
-                    status.innerHTML = "⚠️ Konum izni verilmedi, Afyon merkez baz alınıyor.";
+                    status.innerHTML = "⚠ Konum izni verilmedi, Afyon merkez baz alınıyor.";
                     processStations(38.7569, 30.5387);
                 },
                 { enableHighAccuracy: true, timeout: 10000 }
@@ -122,15 +107,14 @@
         }
 
         function calculateDistance(lat1, lon1, lat2, lon2) {
+            if (lat2 === 0 && lon2 === 0) return 9999; // Konum girilmemişse en alta atsın
             const R = 6371; 
             const dLat = (lat2 - lat1) * Math.PI / 180;
             const dLon = (lon2 - lon1) * Math.PI / 180;
-            const a = 
-                Math.sin(dLat/2) * Math.sin(dLat/2) +
-                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-                Math.sin(dLon/2) * Math.sin(dLon/2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-            return R * c; 
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+                      Math.sin(dLon/2) * Math.sin(dLon/2);
+            return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))); 
         }
 
         function processStations(curLat, curLng) {
@@ -147,9 +131,7 @@
             manualStations.sort((a, b) => a.calculatedDistance - b.calculatedDistance);
 
             manualStations.forEach(st => {
-                const distText = st.calculatedDistance < 1 ? 
-                    Math.round(st.calculatedDistance * 1000) + " m" : 
-                    st.calculatedDistance.toFixed(1) + " km";
+                const distText = st.calculatedDistance === 9999 ? "Konum girilmedi" : (st.calculatedDistance < 1 ? Math.round(st.calculatedDistance * 1000) + " m" : st.calculatedDistance.toFixed(1) + " km");
 
                 list.innerHTML += `
                     <div class="card">
@@ -157,6 +139,7 @@
                             <div class="station-title">⛽ ${st.brand}</div>
                             <div class="distance-badge">📍 ${distText}</div>
                         </div>
+                        <div class="station-address">📍 ${st.address}</div>
                         <div class="prices">
                             <div class="price-item">
                                 <div class="price-label">Benzin</div>
@@ -174,9 +157,11 @@
                     </div>
                 `;
 
-                let marker = L.marker([st.lat, st.lng]).addTo(map)
-                    .bindPopup(`<b>${st.brand}</b><br>Benzin: ${st.benzin === '-' ? 'Yok' : '₺' + st.benzin}<br>Mesafe: ${distText}`);
-                stationMarkers.push(marker);
+                if(st.lat !== 0 && st.lng !== 0) {
+                    let marker = L.marker([st.lat, st.lng]).addTo(map)
+                        .bindPopup(`<b>${st.brand}</b><br>${st.address}<br>Benzin: ${st.benzin === '-' ? 'Yok' : '₺' + st.benzin}`);
+                    stationMarkers.push(marker);
+                }
             });
         }
     </script>
