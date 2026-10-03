@@ -123,8 +123,8 @@
     <div id="map"></div>
 
     <div class="container">
-        <button class="gps-btn" onclick="forceGetLocation()">📍 Konumumu Canlı Al ve Güncelle</button>
-        <div id="gps-status" class="status-text">Lütfen yukarıdaki butona tıklayarak GPS izni verin.</div>
+        <button class="gps-btn" onclick="forceGetLocation()">📍 Konumumu Al ve Güncelle</button>
+        <div id="gps-status" class="status-text">Konum almak için butona tıklayın.</div>
         
         <div id="stations-list"></div>
     </div>
@@ -152,13 +152,14 @@
 
         function initMap(lat, lng) {
             if (!map) {
-                map = L.map('map').setView([lat, lng], 14);
-                L.tileLayer('https://core-renderer-tiles.maps.yandex.net/tiles?l=map&v=21.06.18-0&x={x}&y={y}&z={z}&scale=1&lang=tr_TR', {
+                // Standart uyumlu harita katmanı (OpenStreetMap) kullanıldı
+                map = L.map('map').setView([lat, lng], 15);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                     maxZoom: 19,
-                    attribution: '&copy; Yandex'
+                    attribution: '&copy; OpenStreetMap'
                 }).addTo(map);
             } else {
-                map.setView([lat, lng], 15);
+                map.setView([lat, lng], 16);
             }
 
             if (userMarker) {
@@ -171,13 +172,13 @@
                     weight: 3,
                     opacity: 1,
                     fillOpacity: 0.9
-                }).addTo(map).bindPopup("Canlı Konumunuz");
+                }).addTo(map).bindPopup("Konumunuz");
             }
         }
 
         function forceGetLocation() {
             const statusEl = document.getElementById('gps-status');
-            statusEl.innerHTML = "🔄 GPS uydularına bağlanılıyor, lütfen bekleyin...";
+            statusEl.innerHTML = "🔄 Konum güncelleniyor...";
             statusEl.style.color = "#1976d2";
 
             if (navigator.geolocation) {
@@ -193,12 +194,12 @@
                         await loadStations(lat, lng);
                     },
                     (error) => {
-                        console.warn("GPS Hatası:", error);
-                        statusEl.innerHTML = "⚠️ Konum alınamadı! Lütfen telefonunuzun GPS ve Uygulama Konum İzinlerini kontrol edin.";
+                        console.warn("Konum Hatası:", error);
+                        statusEl.innerHTML = "⚠️ Konum alınamadı, varsayılan konum gösteriliyor.";
                         statusEl.style.color = "#d32f2f";
                         loadStations(38.7569, 30.5387);
                     },
-                    { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+                    { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
                 );
             } else {
                 statusEl.innerHTML = "Cihazınız konum servislerini desteklemiyor.";
@@ -221,7 +222,7 @@
         }
 
         async function fetchNearbyStations(lat, lng) {
-            const radius = 50000; 
+            const radius = 25000; 
             const query = `
                 [out:json][timeout:25];
                 (
@@ -269,12 +270,12 @@
 
         async function loadStations(lat, lng) {
             const listContainer = document.getElementById('stations-list');
-            listContainer.innerHTML = '<p style="text-align:center; color:#666;">Yakındaki akaryakıt istasyonları taranıyor...</p>';
+            listContainer.innerHTML = '<p style="text-align:center; color:#666;">İstasyonlar taranıyor...</p>';
 
             let elements = await fetchNearbyStations(lat, lng);
 
             if (!elements || elements.length === 0) {
-                listContainer.innerHTML = '<p style="text-align:center; color:#e65100; font-size:13px; font-weight:bold;">Harita üzerinden istasyon noktası alınamadı. Güncel Akaryakıt Fiyatları:</p>';
+                listContainer.innerHTML = '<p style="text-align:center; color:#e65100; font-size:13px; font-weight:bold;">Yakında istasyon bulunamadı. Güncel Fiyatlar:</p>';
                 
                 for (let brand in dovizPrices) {
                     const pr = dovizPrices[brand];
@@ -308,7 +309,7 @@
                 const stName = (item.tags && (item.tags.brand || item.tags.name)) || "Akaryakıt İstasyonu";
                 const dist = getDistanceInKm(lat, lng, stLat, stLng);
 
-                let matchedPrice = { benzin: '84.60', motorin: '95.00', lpg: '41.96' };
+                let matchedPrice = { benzin: '-', motorin: '-', lpg: '-' };
                 const upperName = stName.toUpperCase();
                 for (let b in dovizPrices) {
                     if (upperName.includes(b) || b.includes(upperName)) {
