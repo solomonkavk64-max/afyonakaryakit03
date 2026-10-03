@@ -105,7 +105,7 @@
 
     <div class="container" id="stations-list">
         <p style="text-align:center; color:#666; margin-top: 20px;">
-            📍 Konumunuz alınıyor ve çevrenizdeki istasyonlar canlı taranıyor...
+            📍 Konumunuz taranıyor ve çevrenizdeki istasyonlar yükleniyor...
         </p>
     </div>
 
@@ -124,8 +124,8 @@
 
         const map = L.map('map').setView([userLat, userLng], 12);
 
-        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
-            attribution: 'Map &copy; Esri'
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: 'Map &copy; OpenStreetMap'
         }).addTo(map);
 
         function getDistanceInKm(lat1, lon1, lat2, lon2) {
@@ -145,8 +145,8 @@
         // Supabase'den Güncel Fiyatları Çek
         async function fetchPrices() {
             try {
-                const { data } = await supabaseClient.from('doviz_prices').select('*');
-                if (data) {
+                const { data, error } = await supabaseClient.from('doviz_prices').select('*');
+                if (data && data.length > 0) {
                     data.forEach(item => {
                         if (item.brand) {
                             dovizPrices[item.brand.toUpperCase()] = item;
@@ -154,35 +154,36 @@
                     });
                 }
             } catch (e) {
-                console.log("Fiyat çekme hatası:", e);
+                console.log("Fiyat çekme uyarısı:", e);
             }
         }
 
-        // Bulunduğunuz Konumun Çevresindeki Gerçek İstasyonları Canlı Çekme (Overpass API)
+        // Çevredeki İstasyonları Arama
         async function fetchNearbyStationsLive(lat, lng) {
             const listContainer = document.getElementById('stations-list');
             await fetchPrices();
 
-            // 15km Çapındaki Tüm Akaryakıt İstasyonlarını Sorgula
-            const query = `[out:json];node["amenity"="fuel"](around:15000, ${lat}, ${lng});out body;`;
-            const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;
-
             try {
-                const response = await fetch(url);
-                const result = await response.json();
+                // Nominatim Arama Servisi (Güvenilir ve Hızlı)
+                const url = `https://nominatim.openstreetmap.org/search?format=json&q=petrol&lat=${lat}&lon=${lng}&bounded=1&viewbox=${lng-0.15},${lat+0.15},${lng+0.15},${lat-0.15}&limit=20`;
                 
-                if (!result.elements || result.elements.length === 0) {
+                const response = await fetch(url, { headers: { 'Accept-Language': 'tr' } });
+                let result = await response.json();
+
+                if (!result || result.length === 0) {
                     listContainer.innerHTML = '<p style="text-align:center; color:#666;">Yakınınızda istasyon bulunamadı.</p>';
                     return;
                 }
 
-                let stations = result.elements.map(item => {
-                    const stName = item.tags.brand || item.tags.name || 'Akaryakıt İstasyonu';
-                    const dist = getDistanceInKm(lat, lng, item.lat, item.lon);
+                let stations = result.map(item => {
+                    const fullTitle = item.display_name.split(',')[0] || 'Akaryakıt İstasyonu';
+                    const stLat = parseFloat(item.lat);
+                    const stLng = parseFloat(item.lon);
+                    const dist = getDistanceInKm(lat, lng, stLat, stLng);
                     
-                    // Markaya uygun fiyat eşleştirme
+                    // Fiyat Eşleştirme
                     let matchedPrice = { benzin: '43.25', motorin: '43.50', lpg: '22.10' };
-                    const upperName = stName.toUpperCase();
+                    const upperName = fullTitle.toUpperCase();
                     for (let b in dovizPrices) {
                         if (upperName.includes(b) || b.includes(upperName)) {
                             matchedPrice = dovizPrices[b];
@@ -191,15 +192,15 @@
                     }
 
                     return {
-                        name: stName,
-                        lat: item.lat,
-                        lng: item.lon,
+                        name: fullTitle,
+                        lat: stLat,
+                        lng: stLng,
                         distance: dist,
                         prices: matchedPrice
                     };
                 });
 
-                // Yakından uzağa sırala
+                // Mesafeye göre sırala
                 stations.sort((a, b) => a.distance - b.distance);
                 listContainer.innerHTML = '';
 
@@ -208,11 +209,11 @@
                         `${Math.round(st.distance * 1000)} m` : 
                         `${st.distance.toFixed(1)} km`;
 
-                    // Haritaya ekle
+                    // Haritada Göster
                     const marker = L.marker([st.lat, st.lng]).addTo(map);
                     marker.bindPopup(`<b>${st.name}</b><br>Mesafe: ${distStr}<br><button onclick="startGoogleMapsNavigation(${st.lat}, ${st.lng})" style="margin-top:5px; background:#2e7d32; color:white; border:none; padding:5px 10px; border-radius:3px; cursor:pointer;">Rota Çiz</button>`);
 
-                    // Liste kartı
+                    // Liste Kartı
                     const card = document.createElement('div');
                     card.className = 'station-card';
                     card.innerHTML = `
@@ -233,8 +234,8 @@
                 });
 
             } catch (err) {
-                console.error("İstasyon çekme hatası:", err);
-                listContainer.innerHTML = '<p style="text-align:center; color:red;">Canlı istasyonlar yüklenirken bir hata oluştu.</p>';
+                console.error("Hata:", err);
+                listContainer.innerHTML = '<p style="text-align:center; color:#666;">İstasyonlar yüklenemedi, lütfen bağlantınızı kontrol edip sayfayı yenileyin.</p>';
             }
         }
 
