@@ -122,10 +122,12 @@
         let userLng = 30.5387;
         let dovizPrices = {};
 
-        const map = L.map('map').setView([userLat, userLng], 12);
+        const map = L.map('map').setView([userLat, userLng], 13);
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: 'Map &copy; OpenStreetMap'
+        // Engelsiz ve hızlı CartoDB harita katmanı
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap &copy; CARTO',
+            maxZoom: 19
         }).addTo(map);
 
         function getDistanceInKm(lat1, lon1, lat2, lon2) {
@@ -145,7 +147,7 @@
         // Supabase'den Güncel Fiyatları Çek
         async function fetchPrices() {
             try {
-                const { data, error } = await supabaseClient.from('doviz_prices').select('*');
+                const { data } = await supabaseClient.from('doviz_prices').select('*');
                 if (data && data.length > 0) {
                     data.forEach(item => {
                         if (item.brand) {
@@ -158,32 +160,29 @@
             }
         }
 
-        // Çevredeki İstasyonları Arama
+        // Çevredeki İstasyonları Arama (Overpass API - Kumi Mirror)
         async function fetchNearbyStationsLive(lat, lng) {
             const listContainer = document.getElementById('stations-list');
             await fetchPrices();
 
-            try {
-                // Nominatim Arama Servisi (Güvenilir ve Hızlı)
-                const url = `https://nominatim.openstreetmap.org/search?format=json&q=petrol&lat=${lat}&lon=${lng}&bounded=1&viewbox=${lng-0.15},${lat+0.15},${lng+0.15},${lat-0.15}&limit=20`;
-                
-                const response = await fetch(url, { headers: { 'Accept-Language': 'tr' } });
-                let result = await response.json();
+            const query = `[out:json][timeout:10];node["amenity"="fuel"](around:10000,${lat},${lng});out body 25;`;
+            const url = `https://overpass.kumi.systems/api/interpreter?data=${encodeURIComponent(query)}`;
 
-                if (!result || result.length === 0) {
+            try {
+                const response = await fetch(url);
+                const result = await response.json();
+
+                if (!result.elements || result.elements.length === 0) {
                     listContainer.innerHTML = '<p style="text-align:center; color:#666;">Yakınınızda istasyon bulunamadı.</p>';
                     return;
                 }
 
-                let stations = result.map(item => {
-                    const fullTitle = item.display_name.split(',')[0] || 'Akaryakıt İstasyonu';
-                    const stLat = parseFloat(item.lat);
-                    const stLng = parseFloat(item.lon);
-                    const dist = getDistanceInKm(lat, lng, stLat, stLng);
+                let stations = result.elements.map(item => {
+                    const stName = (item.tags && (item.tags.brand || item.tags.name)) || 'Akaryakıt İstasyonu';
+                    const dist = getDistanceInKm(lat, lng, item.lat, item.lon);
                     
-                    // Fiyat Eşleştirme
                     let matchedPrice = { benzin: '43.25', motorin: '43.50', lpg: '22.10' };
-                    const upperName = fullTitle.toUpperCase();
+                    const upperName = stName.toUpperCase();
                     for (let b in dovizPrices) {
                         if (upperName.includes(b) || b.includes(upperName)) {
                             matchedPrice = dovizPrices[b];
@@ -192,15 +191,14 @@
                     }
 
                     return {
-                        name: fullTitle,
-                        lat: stLat,
-                        lng: stLng,
+                        name: stName,
+                        lat: item.lat,
+                        lng: item.lon,
                         distance: dist,
                         prices: matchedPrice
                     };
                 });
 
-                // Mesafeye göre sırala
                 stations.sort((a, b) => a.distance - b.distance);
                 listContainer.innerHTML = '';
 
@@ -209,11 +207,9 @@
                         `${Math.round(st.distance * 1000)} m` : 
                         `${st.distance.toFixed(1)} km`;
 
-                    // Haritada Göster
                     const marker = L.marker([st.lat, st.lng]).addTo(map);
                     marker.bindPopup(`<b>${st.name}</b><br>Mesafe: ${distStr}<br><button onclick="startGoogleMapsNavigation(${st.lat}, ${st.lng})" style="margin-top:5px; background:#2e7d32; color:white; border:none; padding:5px 10px; border-radius:3px; cursor:pointer;">Rota Çiz</button>`);
 
-                    // Liste Kartı
                     const card = document.createElement('div');
                     card.className = 'station-card';
                     card.innerHTML = `
@@ -235,7 +231,7 @@
 
             } catch (err) {
                 console.error("Hata:", err);
-                listContainer.innerHTML = '<p style="text-align:center; color:#666;">İstasyonlar yüklenemedi, lütfen bağlantınızı kontrol edip sayfayı yenileyin.</p>';
+                listContainer.innerHTML = '<p style="text-align:center; color:#666;">İstasyonlar yüklenirken bir hata oluştu. Lütfen sayfayı yenileyin.</p>';
             }
         }
 
