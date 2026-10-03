@@ -49,10 +49,10 @@
         function initMap(lat, lng) {
             if (!map) {
                 map = L.map('map').setView([lat, lng], 15);
-                // Engellenmeyen güvenli CartoDB harita katmanı kullanıldı
-                L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                // Tamamen ücretsiz, açık kaynaklı ve engelsiz harita katmanı
+                L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
                     maxZoom: 19,
-                    attribution: '&copy; CartoDB'
+                    attribution: '&copy; OpenStreetMap'
                 }).addTo(map);
             } else {
                 map.setView([lat, lng], 16);
@@ -67,7 +67,7 @@
 
         function getLocation() {
             const status = document.getElementById('status');
-            status.innerHTML = "GPS uydularından konum alınıyor...";
+            status.innerHTML = "Konum alınıyor...";
             
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
@@ -81,11 +81,11 @@
                         loadPrices(lat, lng);
                     },
                     (err) => {
-                        status.innerHTML = "⚠️ Konum alınamadı. Lütfen GPS'inizi açık tutup tekrar deneyin.";
+                        status.innerHTML = "⚠️ Konum alınamadı, varsayılan merkez gösteriliyor.";
                         status.style.color = "#d32f2f";
                         loadPrices(38.7569, 30.5387);
                     },
-                    { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+                    { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
                 );
             } else {
                 status.innerHTML = "Cihazınız konum desteklemiyor.";
