@@ -3,13 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Akaryakıt Bulucu</title>
+    <title>Akaryakıt Bulucu & AI Asistan</title>
     <style>
         body { font-family: sans-serif; margin: 0; padding: 0; background: #f4f6f9; }
         header { background: #1976d2; color: white; padding: 16px; text-align: center; font-weight: bold; font-size: 18px; }
         .container { padding: 14px; max-width: 600px; margin: auto; }
         .gps-btn { width: 100%; background: #d32f2f; color: white; padding: 16px; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
         .status { text-align: center; font-size: 14px; font-weight: bold; margin-bottom: 15px; color: #333; background: #fff; padding: 10px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        
+        /* Yapay Zeka Alanı */
+        .ai-box { background: linear-gradient(135deg, #283593, #1565c0); color: white; border-radius: 12px; padding: 16px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
+        .ai-title { font-size: 16px; font-weight: bold; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+        .ai-chat-area { background: rgba(255, 255, 255, 0.1); padding: 10px; border-radius: 8px; font-size: 14px; min-height: 40px; margin-bottom: 10px; line-height: 1.4; }
+        .ai-input-group { display: flex; gap: 8px; }
+        .ai-input { flex: 1; padding: 10px; border-radius: 8px; border: none; font-size: 14px; }
+        .ai-send-btn { background: #ff9800; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+
         .card { background: white; border-radius: 12px; padding: 16px; margin-bottom: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
         .station-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
         .station-title { font-size: 16px; font-weight: bold; color: #1976d2; }
@@ -21,9 +30,20 @@
 </head>
 <body>
 
-    <header>⛽ Afyonkarahisar Akaryakıt İstasyonları</header>
+    <header>⛽ Akaryakıt Bulucu & AI Asistan</header>
 
     <div class="container">
+        
+        <!-- YAPAY ZEKA ASİSTAN KUTUSU -->
+        <div class="ai-box">
+            <div class="ai-title">🤖 Akıllı Yakıt Asistanı</div>
+            <div id="aiResponse" class="ai-chat-area">Merhaba Yusuf! Ben yapay zeka asistanınım. Sana en yakın istasyonu bulabilir veya yakıt tasarrufu hakkında tavsiye verebilirim. Nasıl yardımcı olabilirim?</div>
+            <div class="ai-input-group">
+                <input type="text" id="aiQuery" class="ai-input" placeholder="Örn: En ucuz istasyon hangisi?">
+                <button class="ai-send-btn" onclick="askAI()">Sor</button>
+            </div>
+        </div>
+
         <button class="gps-btn" onclick="getLocation()">📍 Konumumu Al ve İstasyonları Sırala</button>
         <div id="status" class="status">Konum bekleniyor... Lütfen butona basın.</div>
         <div id="list"></div>
@@ -39,8 +59,8 @@
 
         let userLat = 38.7569; 
         let userLng = 30.5387; 
+        let currentStations = [];
 
-        // Gerçekçi Afyonkarahisar İstasyon Veritabanı ve Koordinatları
         const fallbackStations = [
             { brand: "Opet Merkez", benzin: "42.50", motorin: "43.10", lpg: "25.20", lat: 38.7612, lng: 30.5421 },
             { brand: "Shell Terminal", benzin: "42.65", motorin: "43.25", lpg: "25.35", lat: 38.7501, lng: 30.5310 },
@@ -64,7 +84,6 @@
                         userLng = pos.coords.longitude;
                         status.innerHTML = `✅ Konum Alındı. İstasyonlar mesafeye göre sıralandı.`;
                         status.style.color = "#2e7d32";
-                        
                         loadAndSortStations(userLat, userLng);
                     },
                     (err) => {
@@ -95,25 +114,18 @@
         async function loadAndSortStations(curLat, curLng) {
             const list = document.getElementById('list');
             list.innerHTML = "Veriler yükleniyor...";
-
-            let stationsToUse = fallbackStations;
+            currentStations = fallbackStations;
 
             try {
-                // Supabase'den verileri çekmeyi deniyoruz
                 const { data, error } = await supabaseClient.from('doviz_prices').select('*');
-                
-                // Eğer Supabase'de düzgün akaryakıt verisi varsa onları kullan, yoksa yukarıdaki gerçekçi listeyi kullan
                 if (!error && data && data.length > 0 && data[0].benzin && data[0].benzin < 60) {
-                    stationsToUse = data;
+                    currentStations = data;
                 }
-            } catch (e) {
-                // Hata olursa yedek listeyi kullanmaya devam et
-            }
+            } catch (e) {}
 
             list.innerHTML = '';
 
-            // Her istasyona mesafe hesapla
-            stationsToUse.forEach(item => {
+            currentStations.forEach(item => {
                 const sLat = item.lat || (curLat + (Math.random() - 0.5) * 0.03);
                 const sLng = item.lng || (curLng + (Math.random() - 0.5) * 0.03);
                 
@@ -122,16 +134,14 @@
                 item.stationLng = sLng;
             });
 
-            // Mesafeye göre en yakından en uzağa sırala
-            stationsToUse.sort((a, b) => a.calculatedDistance - b.calculatedDistance);
+            currentStations.sort((a, b) => a.calculatedDistance - b.calculatedDistance);
 
-            stationsToUse.forEach(item => {
-                const brandName = item.brand || item.istasyon || 'Akaryakıt İstasyonu';
+            currentStations.forEach(item => {
+                const brandName = item.brand || 'Akaryakıt İstasyonu';
                 const distText = item.calculatedDistance < 1 ? 
                     Math.round(item.calculatedDistance * 1000) + " m" : 
                     item.calculatedDistance.toFixed(1) + " km";
 
-                // Hem web hem uygulama içi harita tetikleyicisi (Google Maps Rota URL'si)
                 const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${item.stationLat},${item.stationLng}`;
 
                 list.innerHTML += `
@@ -149,6 +159,42 @@
                     </div>
                 `;
             });
+        }
+
+        // Yapay Zeka Mantık Motoru
+        function askAI() {
+            const query = document.getElementById('aiQuery').value.toLowerCase();
+            const responseBox = document.getElementById('aiResponse');
+
+            if (!query.trim()) {
+                responseBox.innerHTML = "Lütfen yapay zekaya bir soru yazın.";
+                return;
+            }
+
+            let answer = "Bu konuda net bir veri bulamadım ama en yakın istasyonu yukarıdaki listeden seçebilirsin.";
+
+            if (query.includes('ucuz') || query.includes('en ucuz')) {
+                // En ucuz benzini bulalım
+                let cheapest = [...currentStations].sort((a, b) => parseFloat(a.benzin) - parseFloat(b.benzin))[0];
+                if (cheapest) {
+                    answer = `💡 AI Analizi: Şu an listelenenler arasında en uygun fiyatlı benzin ₺${cheapest.benzin} ile ${cheapest.brand} istasyonunda!`;
+                }
+            } else if (query.includes('yakın') || query.includes('en yakın')) {
+                let nearest = currentStations[0];
+                if (nearest) {
+                    answer = `📍 AI Analizi: Sana konum olarak en yakın yer ₺${nearest.calculatedDistance < 1 ? Math.round(nearest.calculatedDistance*1000)+' metre' : nearest.calculatedDistance.toFixed(1)+' km'} mesafedeki ${nearest.brand} istasyonudur.`;
+                }
+            } else if (query.includes('lpg') || query.includes('gaz')) {
+                let cheapestLpg = [...currentStations].sort((a, b) => parseFloat(a.lpg || 99) - parseFloat(b.lpg || 99))[0];
+                if (cheapestLpg) {
+                    answer = `⛽ AI Analizi: En avantajlı LPG fiyatı ₺${cheapestLpg.lpg} fiyatıyla ${cheapestLpg.brand} konumunda bulunuyor.`;
+                }
+            } else if (query.includes('merhaba') || query.includes('selam')) {
+                answer = "Aleykümselam! Yakıt fiyatları, en yakın istasyonlar veya rota optimizasyonu konusunda sana yardım etmeye hazırım.";
+            }
+
+            responseBox.innerHTML = answer;
+            document.getElementById('aiQuery').value = "";
         }
     </script>
 </body>
