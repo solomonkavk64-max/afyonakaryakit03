@@ -82,8 +82,8 @@
                 if (data && data.length > 0) {
                     data.forEach(item => {
                         const brandName = item.brand || 'İstasyon';
-                        // Doğrudan tarayıcı üzerinden haritayı açan evrensel Google Maps web bağlantısı
-                        const mapsUrl = `https://maps.google.com/?q=${currentLat},${currentLng}`;
+                        // Doğrudan cihazın harita uygulamasını tetikleyen Geo URI formatı
+                        const geoUrl = `geo:${currentLat},${currentLng}?q=${currentLat},${currentLng}(${encodeURIComponent(brandName)})`;
 
                         list.innerHTML += `
                             <div class="card">
@@ -93,7 +93,7 @@
                                     <div>Motorin: <span class="price-val">₺${item.motorin || '-'}</span></div>
                                     <div>LPG: <span class="price-val">₺${item.lpg || '-'}</span></div>
                                 </div>
-                                <a class="nav-btn" href="${mapsUrl}" target="_blank">🗺 Google Haritalar ile Rota Aç</a>
+                                <a class="nav-btn" href="${geoUrl}">🧭 Harita Uygulamasında Aç</a>
                             </div>
                         `;
                     });
