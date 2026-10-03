@@ -3,360 +3,119 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Canlı Akaryakıt Bulucu</title>
-    
-    <!-- Leaflet CSS -->
+    <title>Akaryakıt Bulucu</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-
     <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f4f6f9;
-        }
-        header {
-            background-color: #1976d2;
-            color: white;
-            padding: 14px;
-            text-align: center;
-            font-size: 17px;
-            font-weight: bold;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        #map {
-            height: 240px;
-            width: 100%;
-        }
-        .container {
-            padding: 12px;
-        }
-        .gps-btn {
-            display: block;
-            width: 100%;
-            background-color: #d32f2f;
-            color: white;
-            padding: 14px;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            margin-bottom: 10px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .status-text {
-            text-align: center;
-            color: #333;
-            font-size: 13px;
-            margin-bottom: 10px;
-            font-weight: bold;
-        }
-        .station-card {
-            background: white;
-            border-radius: 10px;
-            padding: 14px;
-            margin-bottom: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-        }
-        .station-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .station-name {
-            font-size: 17px;
-            font-weight: bold;
-            color: #222;
-        }
-        .distance-tag {
-            background-color: #e3f2fd;
-            color: #1565c0;
-            padding: 4px 10px;
-            border-radius: 12px;
-            font-size: 13px;
-            font-weight: bold;
-        }
-        .prices {
-            display: flex;
-            justify-content: space-around;
-            margin-top: 10px;
-            background: #f8f9fa;
-            padding: 10px;
-            border-radius: 6px;
-        }
-        .price-item {
-            text-align: center;
-        }
-        .price-title {
-            font-size: 11px;
-            color: #666;
-            margin-bottom: 2px;
-        }
-        .price-val {
-            font-weight: bold;
-            color: #d32f2f;
-            font-size: 15px;
-        }
-        .nav-btn {
-            display: block;
-            width: 100%;
-            text-align: center;
-            background-color: #2e7d32;
-            color: white;
-            padding: 12px 0;
-            margin-top: 12px;
-            border-radius: 6px;
-            font-weight: bold;
-            font-size: 15px;
-            border: none;
-            cursor: pointer;
-            text-decoration: none;
-            box-sizing: border-box;
-        }
+        body { font-family: sans-serif; margin: 0; padding: 0; background: #f4f6f9; }
+        header { background: #1976d2; color: white; padding: 14px; text-align: center; font-weight: bold; }
+        #map { height: 250px; width: 100%; }
+        .container { padding: 12px; }
+        .gps-btn { width: 100%; background: #d32f2f; color: white; padding: 14px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: 10px; }
+        .status { text-align: center; font-size: 13px; font-weight: bold; margin-bottom: 10px; }
+        .card { background: white; border-radius: 10px; padding: 14px; margin-bottom: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .prices { display: flex; justify-content: space-around; background: #f8f9fa; padding: 8px; border-radius: 6px; margin-top: 8px; }
+        .price-val { font-weight: bold; color: #d32f2f; }
+        .nav-btn { display: block; width: 100%; background: #2e7d32; color: white; padding: 10px; text-align: center; border-radius: 6px; text-decoration: none; font-weight: bold; margin-top: 10px; }
     </style>
 </head>
 <body>
 
-    <header>⛽ Canlı Akaryakıt İstasyonları</header>
-    
+    <header>⛽ Akaryakıt İstasyonları</header>
     <div id="map"></div>
 
     <div class="container">
-        <button class="gps-btn" onclick="forceGetLocation()">📍 Konumumu Al ve Güncelle</button>
-        <div id="gps-status" class="status-text">Konum almak için butona tıklayın.</div>
-        
-        <div id="stations-list"></div>
+        <button class="gps-btn" onclick="getLocation()">📍 Konumu Sabitle ve Getir</button>
+        <div id="status" class="status">Konum bekleniyor...</div>
+        <div id="list"></div>
     </div>
 
-    <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <!-- Supabase JS -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <script>
-        const SUPABASE_URL = "https://dzapuhihjzdmzvwzcxht.supabase.co";
-        const SUPABASE_KEY = "sb_publishable_atDC1UU40N7N-U-c3u__4A_mKuI2Oum";
-        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const supabaseClient = supabase.createClient(
+            "https://dzapuhihjzdmzvwzcxht.supabase.co", 
+            "sb_publishable_atDC1UU40N7N-U-c3u__4A_mKuI2Oum"
+        );
 
         let map = null;
-        let userMarker = null;
-        let stationMarkers = [];
-        let dovizPrices = {};
+        let marker = null;
 
-        window.onload = async function() {
-            await fetchPrices();
+        window.onload = function() {
             initMap(38.7569, 30.5387);
-            forceGetLocation();
+            getLocation();
         };
 
         function initMap(lat, lng) {
             if (!map) {
-                // Standart uyumlu harita katmanı (OpenStreetMap) kullanıldı
                 map = L.map('map').setView([lat, lng], 15);
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    maxZoom: 19,
-                    attribution: '&copy; OpenStreetMap'
+                    maxZoom: 19
                 }).addTo(map);
             } else {
                 map.setView([lat, lng], 16);
             }
 
-            if (userMarker) {
-                userMarker.setLatLng([lat, lng]);
+            if (marker) {
+                marker.setLatLng([lat, lng]);
             } else {
-                userMarker = L.circleMarker([lat, lng], {
-                    radius: 10,
-                    fillColor: "#1976d2",
-                    color: "#fff",
-                    weight: 3,
-                    opacity: 1,
-                    fillOpacity: 0.9
-                }).addTo(map).bindPopup("Konumunuz");
+                marker = L.marker([lat, lng]).addTo(map).bindPopup("Seçilen Konum");
             }
         }
 
-        function forceGetLocation() {
-            const statusEl = document.getElementById('gps-status');
-            statusEl.innerHTML = "🔄 Konum güncelleniyor...";
-            statusEl.style.color = "#1976d2";
-
+        function getLocation() {
+            const status = document.getElementById('status');
+            status.innerHTML = "Konum alınıyor...";
+            
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
-                    async (position) => {
-                        const lat = position.coords.latitude;
-                        const lng = position.coords.longitude;
+                    (pos) => {
+                        const lat = pos.coords.latitude;
+                        const lng = pos.coords.longitude;
+                        status.innerHTML = `✅ Konum Sabitlendi: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+                        status.style.color = "#2e7d32";
                         
-                        statusEl.innerHTML = `✅ Konum Alındı: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
-                        statusEl.style.color = "#2e7d32";
-
                         initMap(lat, lng);
-                        await loadStations(lat, lng);
+                        loadPrices(lat, lng);
                     },
-                    (error) => {
-                        console.warn("Konum Hatası:", error);
-                        statusEl.innerHTML = "⚠️ Konum alınamadı, varsayılan konum gösteriliyor.";
-                        statusEl.style.color = "#d32f2f";
-                        loadStations(38.7569, 30.5387);
+                    (err) => {
+                        status.innerHTML = "⚠️ Konum alınamadı, varsayılan merkez kullanılıyor.";
+                        status.style.color = "#d32f2f";
+                        loadPrices(38.7569, 30.5387);
                     },
-                    { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
+                    { enableHighAccuracy: false, timeout: 10000 }
                 );
-            } else {
-                statusEl.innerHTML = "Cihazınız konum servislerini desteklemiyor.";
             }
         }
 
-        async function fetchPrices() {
+        async function loadPrices(lat, lng) {
+            const list = document.getElementById('list');
+            list.innerHTML = "Fiyatlar yükleniyor...";
+
             try {
                 const { data } = await supabaseClient.from('doviz_prices').select('*');
+                list.innerHTML = '';
+
                 if (data && data.length > 0) {
                     data.forEach(item => {
-                        if (item.brand) {
-                            dovizPrices[item.brand.toUpperCase()] = item;
-                        }
+                        list.innerHTML += `
+                            <div class="card">
+                                <b>${item.brand || 'İstasyon'}</b>
+                                <div class="prices">
+                                    <div>Benzin: <span class="price-val">₺${item.benzin || '-'}</span></div>
+                                    <div>Motorin: <span class="price-val">₺${item.motorin || '-'}</span></div>
+                                    <div>LPG: <span class="price-val">₺${item.lpg || '-'}</span></div>
+                                </div>
+                                <a class="nav-btn" href="https://yandex.com.tr/harita/?rtext=~${lat},${lng}&rtt=auto" target="_blank">🚀 Yandex ile Rota Başlat</a>
+                            </div>
+                        `;
                     });
+                } else {
+                    list.innerHTML = "Kayıtlı fiyat bulunamadı.";
                 }
             } catch (e) {
-                console.warn("Fiyatlar çekilemedi:", e);
+                list.innerHTML = "Bağlantı hatası.";
             }
-        }
-
-        async function fetchNearbyStations(lat, lng) {
-            const radius = 25000; 
-            const query = `
-                [out:json][timeout:25];
-                (
-                  node["amenity"="fuel"](around:${radius},${lat},${lng});
-                  way["amenity"="fuel"](around:${radius},${lat},${lng});
-                  node["shop"="fuel"](around:${radius},${lat},${lng});
-                );
-                out center;
-            `;
-            
-            const endpoints = [
-                "https://overpass-api.de/api/interpreter",
-                "https://overpass.kumi.systems/api/interpreter"
-            ];
-
-            for (let ep of endpoints) {
-                try {
-                    const response = await fetch(ep + "?data=" + encodeURIComponent(query));
-                    if (response.ok) {
-                        const data = await response.json();
-                        if (data.elements && data.elements.length > 0) {
-                            return data.elements;
-                        }
-                    }
-                } catch (e) {
-                    console.warn(ep + " yanıt vermedi.");
-                }
-            }
-            return [];
-        }
-
-        function getDistanceInKm(lat1, lon1, lat2, lon2) {
-            const R = 6371; 
-            const dLat = (lat2 - lat1) * Math.PI / 180;
-            const dLon = (lon2 - lon1) * Math.PI / 180;
-            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-                      Math.sin(dLon / 2) * Math.sin(dLon / 2);
-            return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
-        }
-
-        function startYandexNav(lat, lng) {
-            window.open(`https://yandex.com.tr/harita/?rtext=~${lat},${lng}&rtt=auto`, '_blank');
-        }
-
-        async function loadStations(lat, lng) {
-            const listContainer = document.getElementById('stations-list');
-            listContainer.innerHTML = '<p style="text-align:center; color:#666;">İstasyonlar taranıyor...</p>';
-
-            let elements = await fetchNearbyStations(lat, lng);
-
-            if (!elements || elements.length === 0) {
-                listContainer.innerHTML = '<p style="text-align:center; color:#e65100; font-size:13px; font-weight:bold;">Yakında istasyon bulunamadı. Güncel Fiyatlar:</p>';
-                
-                for (let brand in dovizPrices) {
-                    const pr = dovizPrices[brand];
-                    const card = document.createElement('div');
-                    card.className = 'station-card';
-                    card.innerHTML = `
-                        <div class="station-header">
-                            <div class="station-name">${brand} İstasyonu</div>
-                            <div class="distance-tag">📍 Fiyat Listesi</div>
-                        </div>
-                        <div class="prices">
-                            <div class="price-item"><div class="price-title">BENZİN</div><div class="price-val">₺${pr.benzin || '-'}</div></div>
-                            <div class="price-item"><div class="price-title">MOTORİN</div><div class="price-val">₺${pr.motorin || '-'}</div></div>
-                            <div class="price-item"><div class="price-title">LPG</div><div class="price-val">₺${pr.lpg || '-'}</div></div>
-                        </div>
-                        <button class="nav-btn" onclick="startYandexNav(${lat}, ${lng})">
-                           🚀 Yandex ile Rota Başlat
-                        </button>
-                    `;
-                    listContainer.appendChild(card);
-                }
-                return;
-            }
-
-            stationMarkers.forEach(m => map.removeLayer(m));
-            stationMarkers = [];
-
-            let stations = elements.map(item => {
-                const stLat = item.lat || (item.center && item.center.lat);
-                const stLng = item.lon || (item.center && item.center.lon);
-                const stName = (item.tags && (item.tags.brand || item.tags.name)) || "Akaryakıt İstasyonu";
-                const dist = getDistanceInKm(lat, lng, stLat, stLng);
-
-                let matchedPrice = { benzin: '-', motorin: '-', lpg: '-' };
-                const upperName = stName.toUpperCase();
-                for (let b in dovizPrices) {
-                    if (upperName.includes(b) || b.includes(upperName)) {
-                        matchedPrice = dovizPrices[b];
-                        break;
-                    }
-                }
-
-                return {
-                    name: stName,
-                    lat: stLat,
-                    lng: stLng,
-                    distance: dist,
-                    prices: matchedPrice
-                };
-            }).filter(s => s.lat && s.lng);
-
-            stations.sort((a, b) => a.distance - b.distance);
-            listContainer.innerHTML = '';
-
-            stations.forEach(st => {
-                const distStr = st.distance < 1 ? 
-                    `${Math.round(st.distance * 1000)} m` : 
-                    `${st.distance.toFixed(1)} km`;
-
-                const marker = L.marker([st.lat, st.lng]).addTo(map)
-                    .bindPopup(`<b>${st.name}</b><br>Mesafe: ${distStr}`);
-                stationMarkers.push(marker);
-
-                const card = document.createElement('div');
-                card.className = 'station-card';
-                card.innerHTML = `
-                    <div class="station-header">
-                        <div class="station-name">${st.name}</div>
-                        <div class="distance-tag">📍 ${distStr}</div>
-                    </div>
-                    <div class="prices">
-                        <div class="price-item"><div class="price-title">BENZİN</div><div class="price-val">₺${st.prices.benzin || '-'}</div></div>
-                        <div class="price-item"><div class="price-title">MOTORİN</div><div class="price-val">₺${st.prices.motorin || '-'}</div></div>
-                        <div class="price-item"><div class="price-title">LPG</div><div class="price-val">₺${st.prices.lpg || '-'}</div></div>
-                    </div>
-                    <button class="nav-btn" onclick="startYandexNav(${st.lat}, ${st.lng})">
-                       🚀 Yandex ile Rota Başlat
-                    </button>
-                `;
-                listContainer.appendChild(card);
-            });
         }
     </script>
 </body>
