@@ -62,6 +62,21 @@
 
         .route-btn-container { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
         .route-btn { width: 100%; padding: 10px; background: #0f172a; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 12px; cursor: pointer; text-decoration: none; text-align: center; display: block; }
+
+        /* YASAL UYARI VE FOOTER STİLLERİ */
+        .legal-footer {
+            background: #1e293b;
+            color: #94a3b8;
+            padding: 20px 16px;
+            border-radius: 12px;
+            font-size: 11px;
+            line-height: 1.5;
+            margin-top: 30px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .legal-footer h4 { color: #f8fafc; font-size: 12px; margin-top: 0; margin-bottom: 6px; }
+        .privacy-link { color: #38bdf8; text-decoration: underline; cursor: pointer; display: inline-block; margin-top: 8px; }
     </style>
 </head>
 <body>
@@ -95,6 +110,13 @@
 
         <div id="status" class="status">GPS konumunuz bekleniyor...</div>
         <div id="list"></div>
+
+        <!-- YASAL UYARI VE GİZLİLİK POLİTİKASI BÖLÜMÜ -->
+        <div class="legal-footer">
+            <h4>⚠ Yasal Uyarı & Sorumluluk Reddi</h4>
+            <p>Bu uygulama bağımsız bir rehber olarak tasarlanmıştır. Sunulan akaryakıt fiyatları yalnızca bilgilendirme amaçlı olup, anlık değişiklik gösterebilir. En güncel pompa fiyatları ilgili istasyonların tabelalarından teyit edilmelidir. Fiyat uyumsuzluklarından geliştirici sorumlu tutulamaz.</p>
+            <span class="privacy-link" onclick="alert('Gizlilik Politikası: Bu uygulama konum verilerinizi sadece size en yakın istasyonları hesaplamak amacıyla cihazınızda işler ve hiçbir sunucuda üçüncü şahıslarla paylaşmaz.')">Gizlilik Politikası</span>
+        </div>
     </div>
 
     <!-- Leaflet JS -->
@@ -240,7 +262,7 @@
                 stations.sort((a, b) => (parseFloat(a.benzin_price) || 999) - (parseFloat(b.benzin_price) || 999));
             } else if (currentSort === 'motorin') {
                 stations.sort((a, b) => (parseFloat(a.motorin_price) || 999) - (parseFloat(b.motorin_price) || 999));
-            } else if (currentSport === 'lpg') {
+            } else if (currentSort === 'lpg') {
                 stations.sort((a, b) => (parseFloat(a.lpg_price) || 999) - (parseFloat(b.lpg_price) || 999));
             }
 
