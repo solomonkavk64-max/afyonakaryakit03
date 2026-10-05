@@ -6,6 +6,8 @@
     <title>Afyonkarahisar Akaryakıt Fiyatları ve İstasyonlar</title>
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; background: #f0f2f5; }
         header { background: #0f172a; color: white; padding: 18px; text-align: center; font-weight: bold; font-size: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
@@ -48,20 +50,10 @@
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // Görsellerden alınan gerçek adres ve fiyat verileri (lat ve lng değerlerini haritadan girerek güncelleyebilirsiniz)
-        const manualStations = [
-            { brand: "Alpet - Saçaklar Petrol", address: "Şuhut/Afyon", benzin: "86.80", motorin: "-", lpg: "-", lat: 0, lng: 0 },
-            { brand: "Petrol Ofisi", address: "Yeşilçiftlik/Sultandağı/Afyonkarahisar", benzin: "86.80", motorin: "-", lpg: "-", lat: 0, lng: 0 },
-            { brand: "Shell", address: "Cumhuriyet/Çay/Afyonkarahisar", benzin: "86.70", motorin: "-", lpg: "-", lat: 0, lng: 0 },
-            { brand: "Shell", address: "Akören/Sinanpaşa/Afyonkarahisar", benzin: "86.70", motorin: "-", lpg: "-", lat: 0, lng: 0 },
-            { brand: "TotalEnergies", address: "Sülün Beldesi / Köyü Hisar Mah.", benzin: "-", motorin: "-", lpg: "-", lat: 0, lng: 0 },
-            { brand: "Kadoil Dilhas Petrol", address: "Akören/Sinanpaşa/Afyonkarahisar", benzin: "-", motorin: "-", lpg: "-", lat: 0, lng: 0 },
-            { brand: "Türkiye Petrolleri", address: "Atatürk Blv. No:8/3", benzin: "86.76", motorin: "-", lpg: "-", lat: 0, lng: 0 },
-            { brand: "Aytemiz", address: "Ali Çetinkaya Blv.", benzin: "-", motorin: "-", lpg: "-", lat: 0, lng: 0 },
-            { brand: "Yıldız Petrol", address: "Susuz Bld, Milli Birlik Sk.", benzin: "-", motorin: "-", lpg: "-", lat: 0, lng: 0 },
-            { brand: "BP", address: "Afyon Ankara Yolu No:17", benzin: "86.80", motorin: "-", lpg: "-", lat: 0, lng: 0 },
-            { brand: "Opet", address: "Karaca Ören/Sinanpaşa/Afyonkarahisar", benzin: "-", motorin: "-", lpg: "-", lat: 0, lng: 0 }
-        ];
+        // Supabase Bağlantı Bilgileri Entegre Edildi
+        const SUPABASE_URL = 'https://dzapuhihjzdmzvwzcxht.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_atDC1UU40N7N-U-c3u__4A_mKuI2Oum';
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         let map = L.map('map').setView([38.7569, 30.5387], 11);
         L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
@@ -75,6 +67,18 @@
         window.onload = function() {
             initApp();
         };
+
+        async function fetchStationsFromSupabase() {
+            const { data, error } = await _supabase
+                .from('gas_stations')
+                .select('*');
+
+            if (error) {
+                console.error('Supabase veri çekme hatası:', error);
+                return [];
+            }
+            return data || [];
+        }
 
         function initApp() {
             const status = document.getElementById('status');
@@ -107,7 +111,7 @@
         }
 
         function calculateDistance(lat1, lon1, lat2, lon2) {
-            if (lat2 === 0 && lon2 === 0) return 9999; // Konum girilmemişse en alta atsın
+            if (!lat2 || !lon2 || (lat2 === 0 && lon2 === 0)) return 9999;
             const R = 6371; 
             const dLat = (lat2 - lat1) * Math.PI / 180;
             const dLon = (lon2 - lon1) * Math.PI / 180;
@@ -117,49 +121,70 @@
             return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))); 
         }
 
-        function processStations(curLat, curLng) {
+        async function processStations(curLat, curLng) {
             const list = document.getElementById('list');
+            list.innerHTML = 'Veriler yükleniyor...';
+
+            // Supabase'den canlı verileri çek
+            const stations = await fetchStationsFromSupabase();
             list.innerHTML = '';
 
             stationMarkers.forEach(m => map.removeLayer(m));
             stationMarkers = [];
 
-            manualStations.forEach(item => {
-                item.calculatedDistance = calculateDistance(curLat, curLng, item.lat, item.lng);
+            if (stations.length === 0) {
+                list.innerHTML = '<div class="card">Veritabanında henüz istasyon kaydı bulunamadı.</div>';
+                return;
+            }
+
+            stations.forEach(item => {
+                const stLat = parseFloat(item.latitude) || 0;
+                const stLng = parseFloat(item.longitude) || 0;
+                item.calculatedDistance = calculateDistance(curLat, curLng, stLat, stLng);
             });
 
-            manualStations.sort((a, b) => a.calculatedDistance - b.calculatedDistance);
+            stations.sort((a, b) => a.calculatedDistance - b.calculatedDistance);
 
-            manualStations.forEach(st => {
-                const distText = st.calculatedDistance === 9999 ? "Konum girilmedi" : (st.calculatedDistance < 1 ? Math.round(st.calculatedDistance * 1000) + " m" : st.calculatedDistance.toFixed(1) + " km");
+            stations.forEach(st => {
+                const distText = st.calculatedDistance === 9999 
+                    ? "Konum girilmedi" 
+                    : (st.calculatedDistance < 1 ? Math.round(st.calculatedDistance * 1000) + " m" : st.calculatedDistance.toFixed(1) + " km");
+
+                const brandName = st.brand ? `${st.brand} - ${st.name || ''}` : (st.name || 'Akaryakıt İstasyonu');
+                const benzinVal = st.benzin_price || '-';
+                const motorinVal = st.motorin_price || '-';
+                const lpgVal = st.lpg_price || '-';
 
                 list.innerHTML += `
                     <div class="card">
                         <div class="station-header">
-                            <div class="station-title">⛽ ${st.brand}</div>
+                            <div class="station-title">⛽ ${brandName}</div>
                             <div class="distance-badge">📍 ${distText}</div>
                         </div>
-                        <div class="station-address">📍 ${st.address}</div>
+                        <div class="station-address">📍 ${st.address || ''}</div>
                         <div class="prices">
                             <div class="price-item">
                                 <div class="price-label">Benzin</div>
-                                <div class="price-val">${st.benzin === '-' ? '-' : '₺' + st.benzin}</div>
+                                <div class="price-val">${benzinVal === '-' ? '-' : benzinVal}</div>
                             </div>
                             <div class="price-item">
                                 <div class="price-label">Motorin</div>
-                                <div class="price-val">${st.motorin === '-' ? '-' : '₺' + st.motorin}</div>
+                                <div class="price-val">${motorinVal === '-' ? '-' : motorinVal}</div>
                             </div>
                             <div class="price-item">
                                 <div class="price-label">LPG</div>
-                                <div class="price-val">${st.lpg === '-' ? '-' : '₺' + st.lpg}</div>
+                                <div class="price-val">${lpgVal === '-' ? '-' : lpgVal}</div>
                             </div>
                         </div>
                     </div>
                 `;
 
-                if(st.lat !== 0 && st.lng !== 0) {
-                    let marker = L.marker([st.lat, st.lng]).addTo(map)
-                        .bindPopup(`<b>${st.brand}</b><br>${st.address}<br>Benzin: ${st.benzin === '-' ? 'Yok' : '₺' + st.benzin}`);
+                const stLat = parseFloat(st.latitude);
+                const stLng = parseFloat(st.longitude);
+
+                if (stLat && stLng && stLat !== 0 && stLng !== 0) {
+                    let marker = L.marker([stLat, stLng]).addTo(map)
+                        .bindPopup(`<b>${brandName}</b><br>${st.address || ''}<br>Benzin: ${benzinVal}`);
                     stationMarkers.push(marker);
                 }
             });
