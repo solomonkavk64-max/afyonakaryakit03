@@ -46,14 +46,11 @@
 
     <header>⛽ Afyon Akaryakıt Fiyatları & Takip</header>
 
-    <!-- Harita Alanı -->
     <div id="map"></div>
 
     <div class="container">
-        <!-- Arama Kutusu -->
         <input type="text" id="searchInput" class="search-box" placeholder="🔍 İstasyon adı, marka veya adres ara..." oninput="filterAndRender()">
 
-        <!-- Filtreleme / Sıralama Butonları -->
         <div class="filter-bar">
             <button class="filter-btn active" onclick="setSort('distance', this)">📍 En Yakın</button>
             <button class="filter-btn" onclick="setSort('benzin', this)">⛽ En Ucuz Benzin</button>
@@ -85,7 +82,7 @@
         let userMarker = null;
         let stationMarkers = [];
         let rawStations = [];
-        let routeLayer = null; // Ekrandaki rota çizgisi
+        let routeLayer = null;
         let userLat = 38.7569;
         let userLng = 30.5387;
         let currentSort = 'distance';
@@ -241,7 +238,7 @@
                             <div style="text-align:center;">
                                 <b>${brandName}</b><br>
                                 <span style="font-size:11px; color:#555;">${st.address || ''}</span><br>
-                                <button class="route-btn" onclick="drawRoute(${stLat}, ${stLng})">🗺 Haritada Rotayı Çiz</button>
+                                <button class="route-btn" onclick="window.drawRoute(${stLat}, ${stLng})">🗺 Haritada Rotayı Çiz</button>
                             </div>
                         `);
                     stationMarkers.push(marker);
@@ -249,13 +246,16 @@
             });
         }
 
-        // Harita Üzerinde Doğrudan Çizgi İle Rota Gösterme Fonksiyonu
-        async function drawRoute(destLat, destLng) {
+        // Küresel Rota Fonksiyonu
+        window.drawRoute = async function(destLat, destLng) {
             const status = document.getElementById('status');
             status.innerHTML = "⏳ Rota hesaplanıyor...";
 
-            // OSRM (Açık Kaynak Rota Servisi)
-            const url = `https://router.project-osrm.org/route/v1/driving/${userLng},${userLat};${destLng},${destLat}?overview=full&geometries=geojson`;
+            const targetLat = parseFloat(destLat);
+            const targetLng = parseFloat(destLng);
+
+            // OSRM Güvenilir Karayolu Servisi
+            const url = `https://router.project-osrm.org/route/v1/driving/${userLng},${userLat};${targetLng},${targetLat}?overview=full&geometries=geojson`;
 
             try {
                 const res = await fetch(url);
@@ -264,27 +264,23 @@
                 if (data.routes && data.routes.length > 0) {
                     const routeCoordinates = data.routes[0].geometry.coordinates.map(coord => [coord[1], coord[0]]);
 
-                    // Eski rota varsa temizle
                     if (routeLayer) map.removeLayer(routeLayer);
 
-                    // Haritaya mavi rota çizgisini ekle
                     routeLayer = L.polyline(routeCoordinates, { color: '#2563eb', weight: 6, opacity: 0.8 }).addTo(map);
-
-                    // Haritayı rotayı tam kapsayacak şekilde yakınlaştır
                     map.fitBounds(routeLayer.getBounds(), { padding: [30, 30] });
 
                     const distKm = (data.routes[0].distance / 1000).toFixed(1);
                     const durationMin = Math.round(data.routes[0].duration / 60);
 
-                    status.innerHTML = `🏁 Rota Haritada Çizildi: <b>${distKm} km</b> (Yaklaşık ${durationMin} dk)`;
+                    status.innerHTML = `🏁 Rota Çizildi: <b>${distKm} km</b> (${durationMin} dk)`;
                 } else {
-                    status.innerHTML = "⚠ Rota hesaplanamadı.";
+                    status.innerHTML = "⚠ Rota bulunamadı.";
                 }
             } catch (err) {
-                console.error("Rota alma hatası:", err);
+                console.error("Rota Hatası:", err);
                 status.innerHTML = "⚠ Rota çizilirken bir hata oluştu.";
             }
-        }
+        };
     </script>
 </body>
 </html>
