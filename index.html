@@ -28,7 +28,8 @@
 
         .status { text-align: center; font-size: 13px; font-weight: 600; margin-bottom: 15px; color: #475569; background: #fff; padding: 10px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
 
-        .card { background: white; border-radius: 14px; padding: 16px; margin-bottom: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-left: 5px solid #2563eb; }
+        .card { background: white; border-radius: 14px; padding: 16px; margin-bottom: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-left: 5px solid #2563eb; cursor: pointer; transition: transform 0.1s ease, box-shadow 0.1s ease; }
+        .card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
         .station-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
         .station-title { font-size: 17px; font-weight: bold; color: #0f172a; }
         .station-address { font-size: 12px; color: #64748b; margin-bottom: 10px; }
@@ -155,6 +156,28 @@
             filterAndRender();
         }
 
+        // İstasyona tıklanınca haritada odaklanma ve popup açma fonksiyonu
+        function focusStationOnMap(lat, lng, markerIndex) {
+            if (!lat || !lng || lat === 0 || lng === 0) {
+                alert("Bu istasyon için geçerli bir konum koordinatı bulunmuyor.");
+                return;
+            }
+
+            // Haritayı istasyona odakla (Yumuşak geçiş ile zoom seviyesi 16)
+            map.setView([lat, lng], 16, {
+                animate: true,
+                duration: 1.0
+            });
+
+            // İlgili marker'ın popup penceresini aç
+            if (stationMarkers[markerIndex]) {
+                stationMarkers[markerIndex].openPopup();
+            }
+
+            // Sayfayı haritanın olduğu üste kaydır (Mobilde kullanıcı haritayı hemen görsün diye)
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
         function filterAndRender() {
             const searchVal = document.getElementById('searchInput').value.toLowerCase();
             const list = document.getElementById('list');
@@ -195,7 +218,7 @@
                 return;
             }
 
-            stations.forEach(st => {
+            stations.forEach((st, index) => {
                 const distText = st.calculatedDistance === 9999 
                     ? "Konum girilmedi" 
                     : (st.calculatedDistance < 1 ? Math.round(st.calculatedDistance * 1000) + " m" : st.calculatedDistance.toFixed(1) + " km");
@@ -211,8 +234,29 @@
                 // Standart GEO Şeması
                 const geoUrl = `geo:${stLat},${stLng}?q=${stLat},${stLng}(${encodeURIComponent(brandName)})`;
 
+                // Önce marker nesnesini oluşturuyoruz ki index ile eşleşebilsin
+                let marker = null;
+                if (stLat && stLng && stLat !== 0 && stLng !== 0) {
+                    marker = L.marker([stLat, stLng]).addTo(map)
+                        .bindPopup(`
+                            <div style="text-align:center;">
+                                <b>${brandName}</b><br>
+                                <span style="font-size:11px; color:#555;">${st.address || ''}</span><br>
+                                <div class="route-btn-container">
+                                    <a class="route-btn" href="${geoUrl}">🧭 Cihaz Haritası ile Aç</a>
+                                </div>
+                            </div>
+                        `);
+                    stationMarkers.push(marker);
+                } else {
+                    stationMarkers.push(null);
+                }
+
+                const currentMarkerIndex = stationMarkers.length - 1;
+
+                // Kart HTML'e tıklama olayı (onclick) eklendi
                 list.innerHTML += `
-                    <div class="card">
+                    <div class="card" onclick="focusStationOnMap(${stLat}, ${stLng}, ${currentMarkerIndex})">
                         <div class="station-header">
                             <div class="station-title">⛽ ${brandName}</div>
                             <div class="distance-badge">📍 ${distText}</div>
@@ -234,20 +278,6 @@
                         </div>
                     </div>
                 `;
-
-                if (stLat && stLng && stLat !== 0 && stLng !== 0) {
-                    let marker = L.marker([stLat, stLng]).addTo(map)
-                        .bindPopup(`
-                            <div style="text-align:center;">
-                                <b>${brandName}</b><br>
-                                <span style="font-size:11px; color:#555;">${st.address || ''}</span><br>
-                                <div class="route-btn-container">
-                                    <a class="route-btn" href="${geoUrl}">🧭 Cihaz Haritası ile Aç</a>
-                                </div>
-                            </div>
-                        `);
-                    stationMarkers.push(marker);
-                }
             });
         }
     </script>
