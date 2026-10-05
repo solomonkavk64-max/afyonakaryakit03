@@ -6,6 +6,8 @@
     <title>Afyonkarahisar Akaryakıt Fiyatları ve Takip</title>
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Leaflet Routing Machine CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
     <!-- Supabase JS Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
@@ -40,8 +42,10 @@
         .price-val { font-weight: bold; color: #dc2626; font-size: 14px; }
 
         .route-btn-container { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
-        .route-btn { width: 100%; padding: 8px 10px; background: #2563eb; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 11px; cursor: pointer; text-decoration: none; text-align: center; }
-        .yandex-btn { background: #fc3f1d; }
+        .route-btn { width: 100%; padding: 10px; background: #2563eb; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 12px; cursor: pointer; text-decoration: none; text-align: center; }
+        .geo-btn { background: #0f172a; }
+
+        .leaflet-routing-container { display: none !important; }
     </style>
 </head>
 <body>
@@ -68,8 +72,9 @@
         <div id="list"></div>
     </div>
 
-    <!-- Leaflet JS -->
+    <!-- Leaflet JS & Routing Machine -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
     <script>
         const SUPABASE_URL = 'https://dzapuhihjzdmzvwzcxht.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_atDC1UU40N7N-U-c3u__4A_mKuI2Oum';
@@ -84,7 +89,7 @@
         let userMarker = null;
         let stationMarkers = [];
         let rawStations = [];
-        let routePolyline = null;
+        let routingControl = null;
         let userLat = 38.7569;
         let userLng = 30.5387;
         let currentSort = 'distance';
@@ -209,9 +214,9 @@
 
                 const stLat = parseFloat(st.latitude);
                 const stLng = parseFloat(st.longitude);
-                
-                // Yandex Navigasyon Uygulaması URI Şeması
-                const yandexAppUrl = `yandexnavi://build_route_on_map?lat_to=${stLat}&lon_to=${stLng}&lat_from=${userLat}&lon_from=${userLng}`;
+
+                // Standart GEO Şeması (Android/iOS varsayılan harita uygulamasını açar)
+                const geoUrl = `geo:${stLat},${stLng}?q=${stLat},${stLng}(${encodeURIComponent(brandName)})`;
 
                 list.innerHTML += `
                     <div class="card">
@@ -244,8 +249,8 @@
                                 <b>${brandName}</b><br>
                                 <span style="font-size:11px; color:#555;">${st.address || ''}</span><br>
                                 <div class="route-btn-container">
-                                    <button class="route-btn" onclick="window.drawRoute(${stLat}, ${stLng})">🗺 Haritada Çiz</button>
-                                    <a class="route-btn yandex-btn" href="${yandexAppUrl}">🔴 Yandex Navi Uygulamasında Aç</a>
+                                    <button class="route-btn" onclick="window.drawRoute(${stLat}, ${stLng})">🗺 Karayolu Rotası Çiz</button>
+                                    <a class="route-btn geo-btn" href="${geoUrl}">🧭 Cihaz Haritası ile Aç</a>
                                 </div>
                             </div>
                         `);
@@ -254,31 +259,43 @@
             });
         }
 
+        // Gerçek Yollara Göre OSRM Rota Çizimi
         window.drawRoute = function(destLat, destLng) {
             const status = document.getElementById('status');
+            status.innerHTML = "⏳ Yol rotası hesaplanıyor...";
 
-            if (routePolyline) {
-                map.removeLayer(routePolyline);
+            if (routingControl) {
+                map.removeControl(routingControl);
             }
 
-            const points = [
-                [userLat, userLng],
-                [parseFloat(destLat), parseFloat(destLng)]
-            ];
-
-            routePolyline = L.polyline(points, {
-                color: '#2563eb',
-                weight: 6,
-                opacity: 0.9,
-                dashArray: '10, 10'
+            routingControl = L.Routing.control({
+                waypoints: [
+                    L.latLng(userLat, userLng),
+                    L.latLng(destLat, destLng)
+                ],
+                router: L.Routing.osrmv1({
+                    serviceUrl: 'https://router.project-osrm.org/route/v1'
+                }),
+                lineOptions: {
+                    styles: [{ color: '#2563eb', opacity: 0.9, weight: 6 }]
+                },
+                createMarker: function() { return null; },
+                addWaypoints: false,
+                draggableWaypoints: false,
+                fitSelectedRoutes: true,
+                show: false
             }).addTo(map);
 
-            map.fitBounds(routePolyline.getBounds(), { padding: [50, 50] });
+            routingControl.on('routesfound', function(e) {
+                const summary = e.routes[0].summary;
+                const distKm = (summary.totalDistance / 1000).toFixed(1);
+                const durationMin = Math.round(summary.totalTime / 60);
+                status.innerHTML = `🏁 Gerçek Rota Çizildi: <b>${distKm} km</b> (~${durationMin} dk)`;
+            });
 
-            const dist = calculateDistance(userLat, userLng, destLat, destLng);
-            const distText = dist < 1 ? Math.round(dist * 1000) + " metre" : dist.toFixed(1) + " km";
-
-            status.innerHTML = `🏁 Rota Haritada Çizildi: Yaklaşık <b>${distText}</b>`;
+            routingControl.on('routingerror', function() {
+                status.innerHTML = "⚠ Yol rotası çekilemedi. 'Cihaz Haritası ile Aç' butonunu kullanabilirsiniz.";
+            });
         };
     </script>
 </body>
