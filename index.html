@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Afyonkarahisar Akaryakıt Fiyatları ve Takip</title>
+    <title>Afyon Akaryakıt Bul</title>
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <!-- Supabase JS Client -->
@@ -12,61 +12,50 @@
         * { box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; background: #f0f2f5; }
         
-        /* GİRİŞ / SPLASH EKRANI STİLLERİ */
         #splash-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: #0f172a; color: white; display: flex;
             flex-direction: column; justify-content: center; align-items: center; 
-            z-index: 99999; transition: opacity 0.6s ease, visibility 0.6s ease;
+            z-index: 99999; transition: opacity 0.5s ease, visibility 0.5s ease;
         }
         .splash-content { text-align: center; }
-        .splash-logo { font-size: 64px; margin-bottom: 12px; animation: bounce 1.5s infinite; }
-        #splash-screen h1 { font-size: 26px; margin: 0 0 8px 0; font-weight: bold; letter-spacing: 0.5px; }
+        .splash-logo { font-size: 64px; margin-bottom: 12px; }
+        #splash-screen h1 { font-size: 26px; margin: 0 0 8px 0; font-weight: bold; }
         #splash-screen p { font-size: 14px; color: #94a3b8; margin: 0; }
-        .fade-out { opacity: 0; visibility: hidden; }
+        .fade-out { opacity: 0; visibility: hidden; pointer-events: none; }
 
-        @keyframes bounce {
-            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
-            40% { transform: translateY(-12px); }
-            60% { transform: translateY(-6px); }
-        }
-
-        header { background: #0f172a; color: white; padding: 18px; text-align: center; font-weight: bold; font-size: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
+        header { background: #0f172a; color: white; padding: 18px; text-align: center; font-weight: bold; font-size: 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .header-title { flex: 1; text-align: center; }
         .info-icon-btn { background: none; border: none; color: white; font-size: 18px; cursor: pointer; padding: 0 10px; }
 
-        #map { height: 40vh; width: 100%; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); }
+        #map { height: 40vh; width: 100%; }
         .container { padding: 16px; max-width: 600px; margin: auto; padding-bottom: 40px; }
         
-        .search-box { width: 100%; padding: 12px 14px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 14px; margin-bottom: 12px; outline: none; }
-        .search-box:focus { border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,0.2); }
-
+        .search-box { width: 100%; padding: 12px 14px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 14px; margin-bottom: 12px; outline: none; background: white; }
         .filter-bar { display: flex; gap: 8px; margin-bottom: 12px; overflow-x: auto; padding-bottom: 4px; }
-        .filter-btn { background: #e2e8f0; color: #334155; padding: 8px 12px; border: none; border-radius: 8px; font-size: 12px; font-weight: bold; cursor: pointer; white-space: nowrap; transition: 0.2s; }
+        .filter-btn { background: #e2e8f0; color: #334155; padding: 8px 12px; border: none; border-radius: 8px; font-size: 12px; font-weight: bold; cursor: pointer; white-space: nowrap; }
         .filter-btn.active { background: #2563eb; color: white; }
 
         .action-bar { display: flex; gap: 10px; margin-bottom: 14px; }
-        .btn { flex: 1; background: #2563eb; color: white; padding: 14px; border: none; border-radius: 12px; font-size: 14px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .btn:active { transform: scale(0.98); }
+        .btn { flex: 1; background: #2563eb; color: white; padding: 14px; border: none; border-radius: 12px; font-size: 14px; font-weight: bold; cursor: pointer; }
 
-        .status { text-align: center; font-size: 13px; font-weight: 600; margin-bottom: 15px; color: #475569; background: #fff; padding: 10px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .status { text-align: center; font-size: 13px; font-weight: 600; margin-bottom: 15px; color: #475569; background: #fff; padding: 10px; border-radius: 10px; }
 
-        .card { background: white; border-radius: 14px; padding: 16px; margin-bottom: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-left: 5px solid #2563eb; cursor: pointer; transition: transform 0.1s ease, box-shadow 0.1s ease; }
-        .card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .card { background: white; border-radius: 14px; padding: 16px; margin-bottom: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-left: 5px solid #2563eb; cursor: pointer; }
         .station-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
         .station-title { font-size: 17px; font-weight: bold; color: #0f172a; }
         .station-address { font-size: 12px; color: #64748b; margin-bottom: 10px; }
         .distance-badge { background: #e0f2fe; color: #0369a1; padding: 5px 10px; border-radius: 8px; font-size: 12px; font-weight: bold; }
         
-        .prices { display: flex; justify-content: space-between; background: #f8fafc; padding: 10px; border-radius: 10px; margin-top: 10px; font-size: 13px; text-align: center; }
+        .prices { display: flex; justify-content: space-between; background: #f8fafc; padding: 10px; border-radius: 10px; margin-top: 10px; text-align: center; }
         .price-item { flex: 1; }
-        .price-label { color: #64748b; font-size: 11px; margin-bottom: 3px; text-transform: uppercase; font-weight: bold; }
+        .price-label { color: #64748b; font-size: 11px; margin-bottom: 3px; font-weight: bold; text-transform: uppercase; }
         .price-val { font-weight: bold; color: #dc2626; font-size: 14px; }
 
         .route-btn-container { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
-        .route-btn { width: 100%; padding: 10px; background: #0f172a; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 12px; cursor: pointer; text-decoration: none; text-align: center; display: block; }
+        .route-btn { width: 100%; padding: 10px; background: #0f172a; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 12px; text-decoration: none; text-align: center; display: block; }
 
-        /* MODAL (AÇILIR PENCERE) STİLLERİ */
+        /* MODAL STİLLERİ */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0, 0, 0, 0.6); display: flex; justify-content: center; align-items: center;
@@ -75,9 +64,8 @@
         .modal-overlay.open { opacity: 1; visibility: visible; }
         .modal-box {
             background: white; width: 90%; max-width: 450px; border-radius: 16px; padding: 22px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2); transform: translateY(20px); transition: transform 0.3s ease;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
         }
-        .modal-overlay.open .modal-box { transform: translateY(0); }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px; }
         .modal-header h3 { margin: 0; font-size: 16px; color: #0f172a; }
         .close-btn { background: none; border: none; font-size: 20px; font-weight: bold; color: #64748b; cursor: pointer; }
@@ -94,16 +82,15 @@
     <div id="splash-screen">
         <div class="splash-content">
             <div class="splash-logo">⛽</div>
-            <h1>Afyon Akaryakıt</h1>
+            <h1>Afyon Akaryakıt Bul</h1>
             <p>Fiyatlar ve İstasyon Takip Sistemi</p>
         </div>
     </div>
 
-    <!-- ÜST BİLGİ ÇUBUĞU (Yasal Uyarı Butonu Eklendi) -->
     <header>
         <div style="width: 30px;"></div>
-        <div class="header-title">⛽ Afyon Akaryakıt</div>
-        <button class="info-icon-btn" onclick="openModal()" title="Yasal Uyarı & Gizlilik">ℹ</button>
+        <div class="header-title">⛽ Afyon Akaryakıt Bul</div>
+        <button class="info-icon-btn" onclick="openModal()">ℹ</button>
     </header>
 
     <div id="map"></div>
@@ -122,16 +109,15 @@
             <button class="btn" onclick="initApp()">📍 Konumuma Göre Yeniden Sırala</button>
         </div>
 
-        <div id="status" class="status">GPS konumunuz bekleniyor...</div>
+        <div id="status" class="status">Sistem yükleniyor...</div>
         <div id="list"></div>
 
-        <!-- SAYFA ALTINDA YASAL UYARI ERİŞİM BUTONU -->
         <div class="footer-link-container">
             <button onclick="openModal()">⚠ Yasal Uyarı & Gizlilik Politikası</button>
         </div>
     </div>
 
-    <!-- YASAL UYARI VE GİZLİLİK POLİTİKASI MODALI (AÇILIR PENCERE) -->
+    <!-- MODAL -->
     <div id="legalModal" class="modal-overlay" onclick="handleOutsideClick(event)">
         <div class="modal-box">
             <div class="modal-header">
@@ -139,14 +125,14 @@
                 <button class="close-btn" onclick="closeModal()">&times;</button>
             </div>
             <div class="modal-body">
-                <h4>⚠ Sorumluluk Reddi (Disclaimer)</h4>
-                <p>Bu uygulama bağımsız bir rehber olarak tasarlanmıştır. Sunulan akaryakıt fiyatları bilgilendirme amaçlı olup anlık değişiklik gösterebilir. En güncel pompa fiyatları istasyonların tabelalarından teyit edilmelidir. Fiyat uyumsuzluklarından geliştirici sorumlu tutulamaz.</p>
+                <h4>⚠ Sorumluluk Reddi</h4>
+                <p>Bu uygulama bağımsız bir rehber olarak tasarlanmıştır. Sunulan akaryakıt fiyatları bilgilendirme amaçlı olup anlık değişiklik gösterebilir. En güncel pompa fiyatları istasyon tabelalarından teyit edilmelidir.</p>
                 
-                <h4>🔒 Gizlilik Politikası (Privacy Policy)</h4>
-                <p>Uygulamamız kullanıcıların konum verilerini yalnızca cihaz üzerinde size en yakın istasyonları hesaplamak ve sıralamak amacıyla anlık olarak işler. Konum ve kişisel verileriniz hiçbir sunucuya kaydedilmez ve üçüncü şahıslarla asla paylaşılmaz.</p>
+                <h4>🔒 Gizlilik Politikası</h4>
+                <p>Konum verileriniz yalnızca cihaz üzerinde en yakın istasyonları hesaplamak amacıyla işlenir ve hiçbir sunucuda saklanmaz.</p>
                 
-                <h4>📌 Marka ve Telif Hakları</h4>
-                <p>Uygulamada geçen akaryakıt marka isimleri sadece bilgilendirme ve konum yönlendirmesi amacıyla kullanılmaktadır. Hiçbir resmi akaryakıt dağıtım şirketiyle doğrudan ticari bir bağ bulunmamaktadır.</p>
+                <h4>📌 Telif Hakları</h4>
+                <p>Marka isimleri yalnızca bilgilendirme ve konum yönlendirmesi amaçlı kullanılmaktadır.</p>
             </div>
         </div>
     </div>
@@ -158,49 +144,40 @@
         const SUPABASE_ANON_KEY = 'sb_publishable_atDC1UU40N7N-U-c3u__4A_mKuI2Oum';
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        let map = L.map('map').setView([38.7569, 30.5387], 11);
-        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
-            maxZoom: 19,
-            attribution: 'Tiles &copy; Esri'
-        }).addTo(map);
-
-        let userMarker = null;
+        let map, userMarker = null;
         let stationMarkers = [];
         let rawStations = [];
         let userLat = 38.7569;
         let userLng = 30.5387;
         let currentSort = 'distance';
 
-        window.onload = function() {
+        // Sayfa açılır açılmaz haritayı ve verileri güvenli şekilde başlat
+        window.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => {
                 const splash = document.getElementById('splash-screen');
                 if (splash) splash.classList.add('fade-out');
-            }, 1300);
+            }, 1000);
+
+            // Haritayı güvenle oluştur
+            map = L.map('map').setView([38.7569, 30.5387], 11);
+            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+                maxZoom: 19,
+                attribution: 'Tiles &copy; Esri'
+            }).addTo(map);
 
             initApp();
-        };
+        });
 
-        // MODAL YÖNETİMİ
-        function openModal() {
-            document.getElementById('legalModal').classList.add('open');
-        }
-
-        function closeModal() {
-            document.getElementById('legalModal').classList.remove('open');
-        }
-
-        function handleOutsideClick(event) {
-            if (event.target.id === 'legalModal') {
-                closeModal();
-            }
-        }
+        function openModal() { document.getElementById('legalModal').classList.add('open'); }
+        function closeModal() { document.getElementById('legalModal').classList.remove('open'); }
+        function handleOutsideClick(event) { if (event.target.id === 'legalModal') closeModal(); }
 
         function initApp() {
             const status = document.getElementById('status');
             status.innerHTML = "GPS konumunuz alınıyor...";
 
             if (!navigator.geolocation) {
-                status.innerHTML = "Tarayıcınız konum desteklemiyor. Afyon merkez baz alınıyor.";
+                status.innerHTML = "Konum desteklenmiyor. Merkez baz alınıyor.";
                 loadData();
                 return;
             }
@@ -211,17 +188,18 @@
                     userLng = pos.coords.longitude;
                     status.innerHTML = `✅ Konum alındı. İstasyonlar sıralandı.`;
                     
-                    map.setView([userLat, userLng], 12);
-                    if (userMarker) map.removeLayer(userMarker);
-                    userMarker = L.marker([userLat, userLng]).addTo(map).bindPopup("<b>Buradasınız</b>").openPopup();
-
+                    if(map) {
+                        map.setView([userLat, userLng], 12);
+                        if (userMarker) map.removeLayer(userMarker);
+                        userMarker = L.marker([userLat, userLng]).addTo(map).bindPopup("<b>Buradasınız</b>");
+                    }
                     loadData();
                 },
                 (err) => {
-                    status.innerHTML = "⚠ Konum izni verilmedi, Afyon merkez baz alınıyor.";
+                    status.innerHTML = "⚠ Konum izni verilmedi, merkez baz alınıyor.";
                     loadData();
                 },
-                { enableHighAccuracy: true, timeout: 10000 }
+                { enableHighAccuracy: true, timeout: 8000 }
             );
         }
 
@@ -232,8 +210,8 @@
             const { data, error } = await _supabase.from('gas_stations').select('*');
 
             if (error) {
-                console.error('Supabase veri çekme hatası:', error);
-                list.innerHTML = '<div class="card">Veriler yüklenirken bir hata oluştu.</div>';
+                console.error('Hata:', error);
+                list.innerHTML = '<div class="card">Veriler yüklenirken hata oluştu.</div>';
                 return;
             }
 
@@ -260,20 +238,11 @@
         }
 
         function focusStationOnMap(lat, lng, markerIndex) {
-            if (!lat || !lng || lat === 0 || lng === 0) {
-                alert("Bu istasyon için geçerli bir konum koordinatı bulunmuyor.");
-                return;
+            if (!lat || !lng || lat === 0 || lng === 0) return;
+            if(map) {
+                map.setView([lat, lng], 16, { animate: true, duration: 1.0 });
+                if (stationMarkers[markerIndex]) stationMarkers[markerIndex].openPopup();
             }
-
-            map.setView([lat, lng], 16, {
-                animate: true,
-                duration: 1.0
-            });
-
-            if (stationMarkers[markerIndex]) {
-                stationMarkers[markerIndex].openPopup();
-            }
-
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
@@ -282,7 +251,7 @@
             const list = document.getElementById('list');
             list.innerHTML = '';
 
-            stationMarkers.forEach(m => map.removeLayer(m));
+            stationMarkers.forEach(m => { if(m && map) map.removeLayer(m); });
             stationMarkers = [];
 
             let stations = rawStations.map(st => {
@@ -302,75 +271,45 @@
                 );
             }
 
-            if (currentSort === 'distance') {
-                stations.sort((a, b) => a.calculatedDistance - b.calculatedDistance);
-            } else if (currentSort === 'benzin') {
-                stations.sort((a, b) => (parseFloat(a.benzin_price) || 999) - (parseFloat(b.benzin_price) || 999));
-            } else if (currentSort === 'motorin') {
-                stations.sort((a, b) => (parseFloat(a.motorin_price) || 999) - (parseFloat(b.motorin_price) || 999));
-            } else if (currentSort === 'lpg') {
-                stations.sort((a, b) => (parseFloat(a.lpg_price) || 999) - (parseFloat(b.lpg_price) || 999));
-            }
+            if (currentSort === 'distance') stations.sort((a, b) => a.calculatedDistance - b.calculatedDistance);
+            else if (currentSort === 'benzin') stations.sort((a, b) => (parseFloat(a.benzin_price) || 999) - (parseFloat(b.benzin_price) || 999));
+            else if (currentSort === 'motorin') stations.sort((a, b) => (parseFloat(a.motorin_price) || 999) - (parseFloat(b.motorin_price) || 999));
+            else if (currentSort === 'lpg') stations.sort((a, b) => (parseFloat(a.lpg_price) || 999) - (parseFloat(b.lpg_price) || 999));
 
             if (stations.length === 0) {
                 list.innerHTML = '<div class="card" style="text-align:center;">İstasyon kaydı bulunamadı.</div>';
                 return;
             }
 
-            stations.forEach((st, index) => {
-                const distText = st.calculatedDistance === 9999 
-                    ? "Konum girilmedi" 
-                    : (st.calculatedDistance < 1 ? Math.round(st.calculatedDistance * 1000) + " m" : st.calculatedDistance.toFixed(1) + " km");
-
-                const brandName = st.brand ? `${st.brand} -${st.name || ''}` : (st.name || 'Akaryakıt İstasyonu');
-                const benzinVal = st.benzin_price ? `${st.benzin_price} ₺` : '-';
-                const motorinVal = st.motorin_price ? `${st.motorin_price} ₺` : '-';
-                const lpgVal = st.lpg_price ? `${st.lpg_price} ₺` : '-';
-
+            stations.forEach((st) => {
+                const distText = st.calculatedDistance === 9999 ? "Konum girilmedi" : (st.calculatedDistance < 1 ? Math.round(st.calculatedDistance * 1000) + " m" : st.calculatedDistance.toFixed(1) + " km");
+                const brandName = st.brand ? `${st.brand} - ${st.name || ''}` : (st.name || 'Akaryakıt İstasyonu');
                 const stLat = parseFloat(st.latitude);
                 const stLng = parseFloat(st.longitude);
-
                 const geoUrl = `geo:${stLat},${stLng}?q=${stLat},${stLng}(${encodeURIComponent(brandName)})`;
 
                 let marker = null;
-                if (stLat && stLng && stLat !== 0 && stLng !== 0) {
+                if (stLat && stLng && stLat !== 0 && stLng !== 0 && map) {
                     marker = L.marker([stLat, stLng]).addTo(map)
-                        .bindPopup(`
-                            <div style="text-align:center;">
-                                <b>${brandName}</b><br>
-                                <span style="font-size:11px; color:#555;">${st.address || ''}</span><br>
-                                <div class="route-btn-container">
-                                    <a class="route-btn" href="${geoUrl}">🧭 Cihaz Haritası ile Aç</a>
-                                </div>
-                            </div>
-                        `);
+                        .bindPopup(`<b>${brandName}</b><br><a class="route-btn" href="${geoUrl}">🧭 Harita ile Aç</a>`);
                     stationMarkers.push(marker);
                 } else {
                     stationMarkers.push(null);
                 }
 
-                const currentMarkerIndex = stationMarkers.length - 1;
+                const markerIdx = stationMarkers.length - 1;
 
                 list.innerHTML += `
-                    <div class="card" onclick="focusStationOnMap(${stLat}, ${stLng},${currentMarkerIndex})`>
+                    <div class="card" onclick="focusStationOnMap(${stLat}, ${stLng}, ${markerIdx})">
                         <div class="station-header">
                             <div class="station-title">⛽ ${brandName}</div>
                             <div class="distance-badge">📍 ${distText}</div>
                         </div>
                         <div class="station-address">📍 ${st.address || ''}</div>
                         <div class="prices">
-                            <div class="price-item">
-                                <div class="price-label">Benzin</div>
-                                <div class="price-val">${benzinVal}</div>
-                            </div>
-                            <div class="price-item">
-                                <div class="price-label">Motorin</div>
-                                <div class="price-val">${motorinVal}</div>
-                            </div>
-                            <div class="price-item">
-                                <div class="price-label">LPG</div>
-                                <div class="price-val">${lpgVal}</div>
-                            </div>
+                            <div class="price-item"><div class="price-label">Benzin</div><div class="price-val">${st.benzin_price ? st.benzin_price + ' ₺' : '-'}</div></div>
+                            <div class="price-item"><div class="price-label">Motorin</div><div class="price-val">${st.motorin_price ? st.motorin_price + ' ₺' : '-'}</div></div>
+                            <div class="price-item"><div class="price-label">LPG</div><div class="price-val">${st.lpg_price ? st.lpg_price + ' ₺' : '-'}</div></div>
                         </div>
                     </div>
                 `;
