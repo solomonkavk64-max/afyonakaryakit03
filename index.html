@@ -246,7 +246,7 @@
             });
         }
 
-        // Küresel Rota Fonksiyonu
+        // Çift Servis Destekli Kesintisiz Rota Fonksiyonu
         window.drawRoute = async function(destLat, destLng) {
             const status = document.getElementById('status');
             status.innerHTML = "⏳ Rota hesaplanıyor...";
@@ -254,33 +254,56 @@
             const targetLat = parseFloat(destLat);
             const targetLng = parseFloat(destLng);
 
-            // OSRM Güvenilir Karayolu Servisi
-            const url = `https://router.project-osrm.org/route/v1/driving/${userLng},${userLat};${targetLng},${targetLat}?overview=full&geometries=geojson`;
+            // 1. Birincil Servis: OSRM
+            const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${userLng},${userLat};${targetLng},${targetLat}?overview=full&geometries=geojson`;
 
             try {
-                const res = await fetch(url);
-                const data = await res.json();
+                let res = await fetch(osrmUrl);
+                let data = await res.json();
 
                 if (data.routes && data.routes.length > 0) {
-                    const routeCoordinates = data.routes[0].geometry.coordinates.map(coord => [coord[1], coord[0]]);
+                    renderPolyline(data.routes[0].geometry.coordinates, data.routes[0].distance, data.routes[0].duration);
+                    return;
+                }
+            } catch (e) {
+                console.log("OSRM servisi yanıt vermedi, yedek servise geçiliyor...");
+            }
 
-                    if (routeLayer) map.removeLayer(routeLayer);
+            // 2. Yedek Servis: OpenRouteService (OSM Rota Servisi)
+            const orsUrl = `https://api.openrouteservice.org/v2/directions/driving-car?api_key=5b3ce3597851110001cf6248c7c91d59648a47ce84cd290e290f931d&start=${userLng},${userLat}&end=${targetLng},${targetLat}`;
 
-                    routeLayer = L.polyline(routeCoordinates, { color: '#2563eb', weight: 6, opacity: 0.8 }).addTo(map);
-                    map.fitBounds(routeLayer.getBounds(), { padding: [30, 30] });
+            try {
+                let res = await fetch(orsUrl);
+                let data = await res.json();
 
-                    const distKm = (data.routes[0].distance / 1000).toFixed(1);
-                    const durationMin = Math.round(data.routes[0].duration / 60);
-
-                    status.innerHTML = `🏁 Rota Çizildi: <b>${distKm} km</b> (${durationMin} dk)`;
-                } else {
-                    status.innerHTML = "⚠ Rota bulunamadı.";
+                if (data.features && data.features.length > 0) {
+                    const coords = data.features[0].geometry.coordinates;
+                    const dist = data.features[0].properties.summary.distance;
+                    const dur = data.features[0].properties.summary.duration;
+                    renderPolyline(coords, dist, dur);
+                    return;
                 }
             } catch (err) {
-                console.error("Rota Hatası:", err);
-                status.innerHTML = "⚠ Rota çizilirken bir hata oluştu.";
+                console.error("Yedek rota servisi hatası:", err);
             }
+
+            status.innerHTML = "⚠ Rota hesaplanamadı. Lütfen konum servislerinizi kontrol edin.";
         };
+
+        function renderPolyline(coords, distanceInMeters, durationInSeconds) {
+            const status = document.getElementById('status');
+            const routeCoordinates = coords.map(coord => [coord[1], coord[0]]);
+
+            if (routeLayer) map.removeLayer(routeLayer);
+
+            routeLayer = L.polyline(routeCoordinates, { color: '#2563eb', weight: 6, opacity: 0.85 }).addTo(map);
+            map.fitBounds(routeLayer.getBounds(), { padding: [40, 40] });
+
+            const distKm = (distanceInMeters / 1000).toFixed(1);
+            const durationMin = Math.round(durationInSeconds / 60);
+
+            status.innerHTML = `🏁 Rota Çizildi: <b>${distKm} km</b> (Yaklaşık ${durationMin} dk)`;
+        }
     </script>
 </body>
 </html>
