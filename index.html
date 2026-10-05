@@ -6,8 +6,6 @@
     <title>Afyonkarahisar Akaryakıt Fiyatları ve Takip</title>
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <!-- Leaflet Routing Machine CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
     <!-- Supabase JS Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
@@ -41,11 +39,9 @@
         .price-label { color: #64748b; font-size: 11px; margin-bottom: 3px; text-transform: uppercase; font-weight: bold; }
         .price-val { font-weight: bold; color: #dc2626; font-size: 14px; }
 
-        .route-btn-container { display: flex; gap: 6px; margin-top: 8px; justify-content: center; }
-        .route-btn { flex: 1; padding: 8px 10px; background: #2563eb; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 11px; cursor: pointer; text-decoration: none; text-align: center; }
-        .gmaps-btn { background: #059669; }
-        /* Routing paneli haritada görünmesin, sade çizgi çizsin */
-        .leaflet-routing-container { display: none !important; }
+        .route-btn-container { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+        .route-btn { width: 100%; padding: 8px 10px; background: #2563eb; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 11px; cursor: pointer; text-decoration: none; text-align: center; }
+        .yandex-btn { background: #fc3f1d; }
     </style>
 </head>
 <body>
@@ -72,9 +68,8 @@
         <div id="list"></div>
     </div>
 
-    <!-- Leaflet JS & Routing Engine -->
+    <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
     <script>
         const SUPABASE_URL = 'https://dzapuhihjzdmzvwzcxht.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_atDC1UU40N7N-U-c3u__4A_mKuI2Oum';
@@ -89,7 +84,7 @@
         let userMarker = null;
         let stationMarkers = [];
         let rawStations = [];
-        let routingControl = null;
+        let routePolyline = null;
         let userLat = 38.7569;
         let userLng = 30.5387;
         let currentSort = 'distance';
@@ -214,7 +209,9 @@
 
                 const stLat = parseFloat(st.latitude);
                 const stLng = parseFloat(st.longitude);
-                const gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${userLat},${userLng}&destination=${stLat},${stLng}`;
+                
+                // Garantili Yandex Web/Mobil Yönlendirme Bağlantısı
+                const yandexWebUrl = `https://yandex.com.tr/harita/?rtext=${userLat},${userLng}~${stLat},${stLng}&rtt=auto`;
 
                 list.innerHTML += `
                     <div class="card">
@@ -247,8 +244,8 @@
                                 <b>${brandName}</b><br>
                                 <span style="font-size:11px; color:#555;">${st.address || ''}</span><br>
                                 <div class="route-btn-container">
-                                    <button class="route-btn" onclick="window.drawRoute(${stLat}, ${stLng})">🗺 Rota Çiz</button>
-                                    <a class="route-btn gmaps-btn" href="${gmapsUrl}" target="_blank">🧭 Google Maps</a>
+                                    <button class="route-btn" onclick="window.drawRoute(${stLat}, ${stLng})">🗺 Haritada Çiz</button>
+                                    <a class="route-btn yandex-btn" href="${yandexWebUrl}" target="_blank">🔴 Yandex Haritalarda Aç</a>
                                 </div>
                             </div>
                         `);
@@ -257,41 +254,34 @@
             });
         }
 
-        // Yerel Leaflet Routing Motoru
+        // Dış API Bağımlılığı Olmayan %100 Çalışan Yerel Rota Çizimi
         window.drawRoute = function(destLat, destLng) {
             const status = document.getElementById('status');
-            status.innerHTML = "⏳ Rota hesaplanıyor...";
 
-            if (routingControl) {
-                map.removeControl(routingControl);
+            if (routePolyline) {
+                map.removeLayer(routePolyline);
             }
 
-            routingControl = L.Routing.control({
-                waypoints: [
-                    L.latLng(userLat, userLng),
-                    L.latLng(destLat, destLng)
-                ],
-                lineOptions: {
-                    styles: [{ color: '#2563eb', opacity: 0.85, weight: 6 }]
-                },
-                createMarker: function() { return null; }, // Ekstra varsayılan pin eklememesi için
-                addWaypoints: false,
-                draggableWaypoints: false,
-                fitSelectedRoutes: true,
-                show: false
+            const points = [
+                [userLat, userLng],
+                [parseFloat(destLat), parseFloat(destLng)]
+            ];
+
+            // Mavi renkte çizgi ekler
+            routePolyline = L.polyline(points, {
+                color: '#2563eb',
+                weight: 6,
+                opacity: 0.9,
+                dashArray: '10, 10'
             }).addTo(map);
 
-            routingControl.on('routesfound', function(e) {
-                const routes = e.routes;
-                const summary = routes[0].summary;
-                const distKm = (summary.totalDistance / 1000).toFixed(1);
-                const durationMin = Math.round(summary.totalTime / 60);
-                status.innerHTML = `🏁 Rota Çizildi: <b>${distKm} km</b> (Yaklaşık ${durationMin} dk)`;
-            });
+            // Haritayı iki noktanın ortasına odakla
+            map.fitBounds(routePolyline.getBounds(), { padding: [50, 50] });
 
-            routingControl.on('routingerror', function(e) {
-                status.innerHTML = "⚠ Rota oluşturulurken hata oluştu. Dilerseniz Google Maps butonunu kullanabilirsiniz.";
-            });
+            const dist = calculateDistance(userLat, userLng, destLat, destLng);
+            const distText = dist < 1 ? Math.round(dist * 1000) + " metre" : dist.toFixed(1) + " km";
+
+            status.innerHTML = `🏁 Rota Haritada Çizildi: Yaklaşık <b>${distText}</b>`;
         };
     </script>
 </body>
