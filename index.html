@@ -210,8 +210,8 @@
                 const stLat = parseFloat(st.latitude);
                 const stLng = parseFloat(st.longitude);
                 
-                // Garantili Yandex Web/Mobil Yönlendirme Bağlantısı
-                const yandexWebUrl = `https://yandex.com.tr/harita/?rtext=${userLat},${userLng}~${stLat},${stLng}&rtt=auto`;
+                // Yandex Navigasyon Uygulaması URI Şeması
+                const yandexAppUrl = `yandexnavi://build_route_on_map?lat_to=${stLat}&lon_to=${stLng}&lat_from=${userLat}&lon_from=${userLng}`;
 
                 list.innerHTML += `
                     <div class="card">
@@ -245,7 +245,7 @@
                                 <span style="font-size:11px; color:#555;">${st.address || ''}</span><br>
                                 <div class="route-btn-container">
                                     <button class="route-btn" onclick="window.drawRoute(${stLat}, ${stLng})">🗺 Haritada Çiz</button>
-                                    <a class="route-btn yandex-btn" href="${yandexWebUrl}" target="_blank">🔴 Yandex Haritalarda Aç</a>
+                                    <a class="route-btn yandex-btn" href="${yandexAppUrl}">🔴 Yandex Navi Uygulamasında Aç</a>
                                 </div>
                             </div>
                         `);
@@ -254,7 +254,6 @@
             });
         }
 
-        // Dış API Bağımlılığı Olmayan %100 Çalışan Yerel Rota Çizimi
         window.drawRoute = function(destLat, destLng) {
             const status = document.getElementById('status');
 
@@ -267,7 +266,6 @@
                 [parseFloat(destLat), parseFloat(destLng)]
             ];
 
-            // Mavi renkte çizgi ekler
             routePolyline = L.polyline(points, {
                 color: '#2563eb',
                 weight: 6,
@@ -275,7 +273,6 @@
                 dashArray: '10, 10'
             }).addTo(map);
 
-            // Haritayı iki noktanın ortasına odakla
             map.fitBounds(routePolyline.getBounds(), { padding: [50, 50] });
 
             const dist = calculateDistance(userLat, userLng, destLat, destLng);
