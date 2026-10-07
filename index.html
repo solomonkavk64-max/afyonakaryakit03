@@ -12,7 +12,6 @@
         * { box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; background: #f0f2f5; }
         
-        /* GİRİŞ / SPLASH EKRANI STİLLERİ */
         #splash-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: #0f172a; color: white; display: flex;
@@ -38,7 +37,6 @@
         #map { height: 40vh; width: 100%; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); }
         .container { padding: 16px; max-width: 600px; margin: auto; padding-bottom: 40px; }
         
-        /* DUYURU BANDI STİLLERİ */
         #newsBanner { display: none; background: #eff6ff; border: 1px solid #bfdbfe; border-left: 5px solid #2563eb; padding: 15px; border-radius: 12px; margin-bottom: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
         #newsBanner h3 { margin: 0 0 6px 0; color: #1e40af; font-size: 15px; display: flex; align-items: center; gap: 6px; }
         #newsBanner p { margin: 0; color: #334155; font-size: 13px; line-height: 1.5; }
@@ -72,7 +70,6 @@
         .route-btn-container { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
         .route-btn { width: 100%; padding: 10px; background: #0f172a; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 12px; cursor: pointer; text-decoration: none; text-align: center; display: block; }
 
-        /* MODAL (AÇILIR PENCERE) STİLLERİ */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0, 0, 0, 0.6); display: flex; justify-content: center; align-items: center;
@@ -96,7 +93,6 @@
 </head>
 <body>
 
-    <!-- GİRİŞ / SPLASH EKRANI -->
     <div id="splash-screen">
         <div class="splash-content">
             <div class="splash-logo">⛽</div>
@@ -105,7 +101,6 @@
         </div>
     </div>
 
-    <!-- ÜST BİLGİ ÇUBUĞU -->
     <header>
         <div style="width: 30px;"></div>
         <div class="header-title">⛽ Afyon Akaryakıt</div>
@@ -115,7 +110,7 @@
     <div id="map"></div>
 
     <div class="container">
-        <!-- DUYURU BANDI (Yönetim panelinden yazı girilince otomatik görünecek) -->
+        <!-- DUYURU BANDI -->
         <div id="newsBanner">
             <h3 id="bannerTitle">📢 Duyuru Başlığı</h3>
             <p id="bannerContent">Duyuru içeriği buraya gelecek...</p>
@@ -138,13 +133,11 @@
         <div id="status" class="status">GPS konumunuz bekleniyor...</div>
         <div id="list"></div>
 
-        <!-- SAYFA ALTINDA YASAL UYARI ERİŞİM BUTONU -->
         <div class="footer-link-container">
             <button onclick="openModal()">⚠ Yasal Uyarı & Gizlilik Politikası</button>
         </div>
     </div>
 
-    <!-- YASAL UYARI VE GİZLİLİK POLİTİKASI MODALI -->
     <div id="legalModal" class="modal-overlay" onclick="handleOutsideClick(event)">
         <div class="modal-box">
             <div class="modal-header">
@@ -153,13 +146,9 @@
             </div>
             <div class="modal-body">
                 <h4>⚠ Sorumluluk Reddi (Disclaimer)</h4>
-                <p>Bu uygulama bağımsız bir rehber olarak tasarlanmıştır. Sunulan akaryakıt fiyatları bilgilendirme amaçlı olup anlık değişiklik gösterebilir. En güncel pompa fiyatları istasyonların tabelalarından teyit edilmelidir. Fiyat uyumsuzluklarından geliştirici sorumlu tutulamaz.</p>
-                
+                <p>Bu uygulama bağımsız bir rehber olarak tasarlanmıştır. Sunulan akaryakıt fiyatları bilgilendirme amaçlı olup anlık değişiklik gösterebilir.</p>
                 <h4>🔒 Gizlilik Politikası (Privacy Policy)</h4>
-                <p>Uygulamamız kullanıcıların konum verilerini yalnızca cihaz üzerinde size en yakın istasyonları hesaplamak ve sıralamak amacıyla anlık olarak işler. Konum ve kişisel verileriniz hiçbir sunucuya kaydedilmez ve üçüncü şahıslarla asla paylaşılmaz.</p>
-                
-                <h4>📌 Marka ve Telif Hakları</h4>
-                <p>Uygulamada geçen akaryakıt marka isimleri sadece bilgilendirme ve konum yönlendirmesi amacıyla kullanılmaktadır. Hiçbir resmi akaryakıt dağıtım şirketiyle doğrudan ticari bir bağ bulunmamaktadır.</p>
+                <p>Uygulamamız kullanıcıların konum verilerini yalnızca cihaz üzerinde size en yakın istasyonları hesaplamak ve sıralamak amacıyla anlık olarak işler.</p>
             </div>
         </div>
     </div>
@@ -184,7 +173,6 @@
         let userLng = 30.5387;
         let currentSort = 'distance';
 
-        // Kullanıcı Konumu İçin Özel Kırmızı İkon Tanımı
         const redIcon = L.icon({
             iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
             shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.7/images/marker-shadow.png',
@@ -200,47 +188,39 @@
                 if (splash) splash.classList.add('fade-out');
             }, 1300);
 
-            // Yönetim Panelinden girilen duyuruyu kontrol et ve göster
-            checkActiveNews();
-
+            loadNews();
             initApp();
         };
 
-        // DUYURU KONTROL FONKSİYONU
-        function checkActiveNews() {
-            const savedNews = localStorage.getItem("activeNews");
-            if (savedNews) {
-                try {
-                    const news = JSON.parse(savedNews);
+        // SUPABASE'DEN DUYURUYU ÇEKME
+        async function loadNews() {
+            try {
+                const { data, error } = await _supabase
+                    .from('news')
+                    .select('*')
+                    .order('created_at', { ascending: false })
+                    .limit(1);
+
+                if (data && data.length > 0) {
+                    const news = data[0];
                     document.getElementById("bannerTitle").textContent = "📢 " + news.title;
                     document.getElementById("bannerContent").textContent = news.content;
                     
-                    if(news.date) {
-                        const dateObj = new Date(news.date);
+                    if(news.created_at) {
+                        const dateObj = new Date(news.created_at);
                         document.getElementById("newsDate").textContent = "Yayınlanma: " + dateObj.toLocaleDateString('tr-TR') + " " + dateObj.toLocaleTimeString('tr-TR', {hour: '2-digit', minute:'2-digit'});
                     }
 
                     document.getElementById("newsBanner").style.display = "block";
-                } catch (e) {
-                    console.error("Duyuru okunurken hata oluştu:", e);
                 }
+            } catch (e) {
+                console.error("Duyuru yüklenirken hata:", e);
             }
         }
 
-        // MODAL YÖNETİMİ
-        function openModal() {
-            document.getElementById('legalModal').classList.add('open');
-        }
-
-        function closeModal() {
-            document.getElementById('legalModal').classList.remove('open');
-        }
-
-        function handleOutsideClick(event) {
-            if (event.target.id === 'legalModal') {
-                closeModal();
-            }
-        }
+        function openModal() { document.getElementById('legalModal').classList.add('open'); }
+        function closeModal() { document.getElementById('legalModal').classList.remove('open'); }
+        function handleOutsideClick(event) { if (event.target.id === 'legalModal') closeModal(); }
 
         function initApp() {
             const status = document.getElementById('status');
@@ -260,8 +240,6 @@
                     
                     map.setView([userLat, userLng], 12);
                     if (userMarker) map.removeLayer(userMarker);
-                    
-                    // Kullanıcı konum pini kırmızı ikon olarak eklendi
                     userMarker = L.marker([userLat, userLng], {icon: redIcon}).addTo(map).bindPopup("<b>📍 Buradasınız</b>").openPopup();
 
                     loadData();
@@ -314,15 +292,8 @@
                 return;
             }
 
-            map.setView([lat, lng], 16, {
-                animate: true,
-                duration: 1.0
-            });
-
-            if (stationMarkers[markerIndex]) {
-                stationMarkers[markerIndex].openPopup();
-            }
-
+            map.setView([lat, lng], 16, { animate: true, duration: 1.0 });
+            if (stationMarkers[markerIndex]) stationMarkers[markerIndex].openPopup();
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
@@ -337,10 +308,7 @@
             let stations = rawStations.map(st => {
                 const stLat = parseFloat(st.latitude) || 0;
                 const stLng = parseFloat(st.longitude) || 0;
-                return {
-                    ...st,
-                    calculatedDistance: calculateDistance(userLat, userLng, stLat, stLng)
-                };
+                return { ...st, calculatedDistance: calculateDistance(userLat, userLng, stLat, stLng) };
             });
 
             if (searchVal.trim() !== '') {
@@ -367,10 +335,7 @@
             }
 
             stations.forEach((st, index) => {
-                const distText = st.calculatedDistance === 9999 
-                    ? "Konum girilmedi" 
-                    : (st.calculatedDistance < 1 ? Math.round(st.calculatedDistance * 1000) + " m" : st.calculatedDistance.toFixed(1) + " km");
-
+                const distText = st.calculatedDistance === 9999 ? "Konum girilmedi" : (st.calculatedDistance < 1 ? Math.round(st.calculatedDistance * 1000) + " m" : st.calculatedDistance.toFixed(1) + " km");
                 const brandName = st.brand ? `${st.brand} - ${st.name || ''}` : (st.name || 'Akaryakıt İstasyonu');
                 const benzinVal = st.benzin_price ? `${st.benzin_price} ₺` : '-';
                 const motorinVal = st.motorin_price ? `${st.motorin_price} ₺` : '-';
@@ -378,7 +343,6 @@
 
                 const stLat = parseFloat(st.latitude);
                 const stLng = parseFloat(st.longitude);
-
                 const geoUrl = `geo:${stLat},${stLng}?q=${stLat},${stLng}(${encodeURIComponent(brandName)})`;
 
                 let marker = null;
@@ -412,7 +376,7 @@
                                 <div class="price-label">Benzin</div>
                                 <div class="price-val">${benzinVal}</div>
                             </div>
-                            <div class="price-item">
+                               <div class="price-item">
                                 <div class="price-label">Motorin</div>
                                 <div class="price-val">${motorinVal}</div>
                             </div>
