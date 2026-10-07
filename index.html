@@ -38,12 +38,13 @@
         #map { height: 40vh; width: 100%; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); }
         .container { padding: 16px; max-width: 600px; margin: auto; padding-bottom: 40px; }
         
-        /* DUYURU BANTI STİLLERİ */
-        .news-card { background: #ffffff; border-left: 5px solid #2563eb; padding: 16px 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 16px; display: none; }
-        .news-card h3 { margin: 0 0 6px 0; color: #0f172a; font-size: 16px; }
-        .news-card p { margin: 0; color: #475569; font-size: 13px; line-height: 1.5; }
+        /* DUYURU BANDI STİLLERİ */
+        #newsBanner { display: none; background: #eff6ff; border: 1px solid #bfdbfe; border-left: 5px solid #2563eb; padding: 15px; border-radius: 12px; margin-bottom: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
+        #newsBanner h3 { margin: 0 0 6px 0; color: #1e40af; font-size: 15px; display: flex; align-items: center; gap: 6px; }
+        #newsBanner p { margin: 0; color: #334155; font-size: 13px; line-height: 1.5; }
+        #newsDate { font-size: 11px; color: #64748b; display: block; margin-top: 6px; }
 
-        .search-box { width: 100%; padding: 12px 14px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 14px; margin-bottom: 12px; outline: none; }
+        .search-box { width: 100%; padding: 12px 14px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 14px; margin-bottom: 12px; outline: none; background: white; }
         .search-box:focus { border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,0.2); }
 
         .filter-bar { display: flex; gap: 8px; margin-bottom: 12px; overflow-x: auto; padding-bottom: 4px; }
@@ -89,8 +90,8 @@
         .modal-body { font-size: 13px; color: #334155; line-height: 1.6; max-height: 50vh; overflow-y: auto; }
         .modal-body h4 { color: #0f172a; margin-top: 12px; margin-bottom: 4px; font-size: 13px; }
         
-        .footer-link-container { text-align: center; margin-top: 25px; padding-top: 15px; border-top: 1px solid #e2e8f0; display: flex; justify-content: center; gap: 15px; }
-        .footer-link-container button, .footer-link-container a { background: none; border: none; color: #2563eb; font-size: 13px; font-weight: bold; cursor: pointer; text-decoration: underline; }
+        .footer-link-container { text-align: center; margin-top: 25px; padding-top: 15px; border-top: 1px solid #e2e8f0; }
+        .footer-link-container button { background: none; border: none; color: #2563eb; font-size: 13px; font-weight: bold; cursor: pointer; text-decoration: underline; }
     </style>
 </head>
 <body>
@@ -114,10 +115,11 @@
     <div id="map"></div>
 
     <div class="container">
-        <!-- DUYURU BANDI -->
-        <div id="newsContainer" class="news-card">
-            <h3 id="newsTitleDisplay"></h3>
-            <p id="newsContentDisplay"></p>
+        <!-- DUYURU BANDI (Yönetim panelinden yazı girilince otomatik görünecek) -->
+        <div id="newsBanner">
+            <h3 id="bannerTitle">📢 Duyuru Başlığı</h3>
+            <p id="bannerContent">Duyuru içeriği buraya gelecek...</p>
+            <span id="newsDate"></span>
         </div>
 
         <input type="text" id="searchInput" class="search-box" placeholder="🔍 İstasyon adı, marka veya adres ara..." oninput="filterAndRender()">
@@ -136,10 +138,9 @@
         <div id="status" class="status">GPS konumunuz bekleniyor...</div>
         <div id="list"></div>
 
-        <!-- SAYFA ALTINDA YASAL UYARI VE YÖNETİM PANELİ ERİŞİMİ -->
+        <!-- SAYFA ALTINDA YASAL UYARI ERİŞİM BUTONU -->
         <div class="footer-link-container">
-            <button onclick="openModal()">⚠ Yasal Uyarı</button>
-            <a href="admin.html">⚙ Yönetim Paneli</a>
+            <button onclick="openModal()">⚠ Yasal Uyarı & Gizlilik Politikası</button>
         </div>
     </div>
 
@@ -199,25 +200,29 @@
                 if (splash) splash.classList.add('fade-out');
             }, 1300);
 
-            // Duyuruyu Tarayıcı Hafızasından Kontrol Et ve Göster
-            checkAndShowNews();
+            // Yönetim Panelinden girilen duyuruyu kontrol et ve göster
+            checkActiveNews();
 
             initApp();
         };
 
-        // Duyuruyu Okuma Fonksiyonu
-        function checkAndShowNews() {
+        // DUYURU KONTROL FONKSİYONU
+        function checkActiveNews() {
             const savedNews = localStorage.getItem("activeNews");
             if (savedNews) {
                 try {
                     const news = JSON.parse(savedNews);
-                    if (news.title && news.content) {
-                        document.getElementById("newsTitleDisplay").textContent = "📢 " + news.title;
-                        document.getElementById("newsContentDisplay").textContent = news.content;
-                        document.getElementById("newsContainer").style.display = "block";
+                    document.getElementById("bannerTitle").textContent = "📢 " + news.title;
+                    document.getElementById("bannerContent").textContent = news.content;
+                    
+                    if(news.date) {
+                        const dateObj = new Date(news.date);
+                        document.getElementById("newsDate").textContent = "Yayınlanma: " + dateObj.toLocaleDateString('tr-TR') + " " + dateObj.toLocaleTimeString('tr-TR', {hour: '2-digit', minute:'2-digit'});
                     }
+
+                    document.getElementById("newsBanner").style.display = "block";
                 } catch (e) {
-                    console.error("Duyuru okunurken hata oluştu");
+                    console.error("Duyuru okunurken hata oluştu:", e);
                 }
             }
         }
@@ -256,6 +261,7 @@
                     map.setView([userLat, userLng], 12);
                     if (userMarker) map.removeLayer(userMarker);
                     
+                    // Kullanıcı konum pini kırmızı ikon olarak eklendi
                     userMarker = L.marker([userLat, userLng], {icon: redIcon}).addTo(map).bindPopup("<b>📍 Buradasınız</b>").openPopup();
 
                     loadData();
@@ -393,6 +399,7 @@
                 }
 
                 const currentMarkerIndex = stationMarkers.length - 1;
+
                 list.innerHTML += `
                     <div class="card" onclick="focusStationOnMap(${stLat}, ${stLng},${currentMarkerIndex})">
                         <div class="station-header">
