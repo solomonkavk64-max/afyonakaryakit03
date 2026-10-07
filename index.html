@@ -36,12 +36,14 @@
 
         #map { height: 40vh; width: 100%; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); }
         
-        /* Harita pin popup çerçevesini ve gölgesini tamamen gizler */
-        .leaflet-popup-content-wrapper, .leaflet-popup-tip {
+        /* Kırmızı pinin arkasındaki kare/üçgen çerçeveyi ve gölgeyi tamamen yok eder */
+        .leaflet-popup, .leaflet-popup-content-wrapper, .leaflet-popup-tip, .leaflet-container .leaflet-popup-content-wrapper {
             background: transparent !important;
             box-shadow: none !important;
             border: none !important;
+            padding: 0 !important;
         }
+        .leaflet-popup-tip-container { display: none !important; }
 
         .container { padding: 16px; max-width: 600px; margin: auto; padding-bottom: 40px; }
         
@@ -200,7 +202,6 @@
             initApp();
         };
 
-        // SUPABASE'DEN DUYURUYU ÇEKME
         async function loadNews() {
             try {
                 const { data, error } = await _supabase
@@ -284,7 +285,10 @@
             const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
                       Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
                       Math.sin(dLon/2) * Math.sin(dLon/2);
-            return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))); 
+            let straightDist = R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+            
+            // Gerçek yol / sokak dönemeç faktörü (%25 ekleyerek Yandex sürüş mesafesine yaklaştırıldı)
+            return straightDist * 1.25;
         }
 
         function setSort(sortType, btnElement) {
@@ -375,12 +379,12 @@
                 list.innerHTML += `
                     <div class="card" onclick="focusStationOnMap(${stLat}, ${stLng},${currentMarkerIndex})">
                         <div class="station-header">
-                            <div class="station-title">⛽ ${brandName}</div>
+                        <div class="station-title">⛽ ${brandName}</div>
                             <div class="distance-badge">📍 ${distText}</div>
                         </div>
                         <div class="station-address">📍 ${st.address || ''}</div>
                         <div class="prices">
-                        <div class="price-item">
+                            <div class="price-item">
                                 <div class="price-label">Benzin</div>
                                 <div class="price-val">${benzinVal}</div>
                             </div>
