@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Akaryakıt Yönetim Paneli</title>
-    <!-- Supabase JS Client -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * { box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 20px; background: #f0f2f5; color: #1e293b; }
@@ -44,7 +42,7 @@
             <input type="text" id="newsTitle" placeholder="Örn: Akaryakıta Zam Geldi!">
             
             <label>Duyuru İçeriği</label>
-            <textarea id="newsContent" rows="4" placeholder="Örn: 8 Ekim itibarıyla motorin grubuna 1.45 TL fiyat artışı yansıtıldı."></textarea>
+            <textarea id="newsContent" rows="4" placeholder="Örn: Motorin grubuna fiyat artışı yansıtıldı."></textarea>
             
             <button onclick="publishNews()">Duyuruyu Yayınla</button>
             <div id="newsMsg" class="msg"></div>
@@ -54,10 +52,6 @@
     </div>
 
     <script>
-        const SUPABASE_URL = 'https://dzapuhihjzdmzvwzcxht.supabase.co';
-        const SUPABASE_ANON_KEY = 'sb_publishable_atDC1UU40N7N-U-c3u__4A_mKuI2Oum';
-        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
         // Basit şifre koruması (Şifre: 123)
         const ADMIN_PASSWORD = "123";
 
@@ -93,7 +87,7 @@
             location.reload();
         }
 
-        async function publishNews() {
+        function publishNews() {
             const title = document.getElementById("newsTitle").value.trim();
             const content = document.getElementById("newsContent").value.trim();
             const msg = document.getElementById("newsMsg");
@@ -104,22 +98,19 @@
                 return;
             }
 
-            msg.textContent = "Yayınlanıyor...";
-            msg.className = "msg";
+            try {
+                // Duyuruyu tarayıcı hafızasına kaydediyoruz
+                const newsData = { title: title, content: content, date: new Date().toISOString() };
+                localStorage.setItem("activeNews", JSON.stringify(newsData));
 
-            const { error } = await _supabase
-                .from('news')
-                .insert([{ title: title, content: content }]);
-
-            if (error) {
-                console.error(error);
-                msg.textContent = "Yayınlama sırasında hata oluştu!";
-                msg.className = "msg error";
-            } else {
                 msg.textContent = "✅ Duyuru başarıyla yayınlandı!";
                 msg.className = "msg success";
+                
                 document.getElementById("newsTitle").value = "";
                 document.getElementById("newsContent").value = "";
+            } catch (e) {
+                msg.textContent = "Yayınlama sırasında hata oluştu!";
+                msg.className = "msg error";
             }
         }
     </script>
