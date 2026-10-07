@@ -3,113 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Akaryakıt Yönetim Paneli</title>
+    <title>Afyon Akaryakıt Fiyatları ve Duyurular</title>
     <style>
-        * { box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 20px; background: #0f172a; color: #f8fafc; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-        .card { background: #1e293b; padding: 24px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); width: 100%; max-width: 420px; }
-        h2 { margin-top: 0; font-size: 20px; color: #38bdf8; text-align: center; margin-bottom: 20px; }
-        label { display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px; color: #94a3b8; }
-        input, textarea { width: 100%; padding: 12px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: white; font-size: 14px; margin-bottom: 14px; outline: none; font-family: inherit; }
-        input:focus, textarea:focus { border-color: #38bdf8; }
-        button { width: 100%; background: #2563eb; color: white; padding: 14px; border: none; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
-        button:hover { background: #1d4ed8; }
-        .logout-btn { background: #475569; margin-top: 10px; }
-        .logout-btn:hover { background: #334155; }
-        #loginScreen, #adminPanel { display: none; }
-        .msg { font-size: 13px; font-weight: bold; text-align: center; margin-top: 12px; }
-        .success { color: #4ade80; }
-        .error { color: #f87171; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 20px; background: #f8fafc; color: #1e293b; }
+        .container { max-width: 600px; margin: 0 auto; }
+        h1 { text-align: center; color: #0f172a; margin-bottom: 24px; }
+        .news-card { background: #ffffff; border-left: 5px solid #2563eb; padding: 16px 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 20px; display: none; }
+        .news-card h3 { margin: 0 0 8px 0; color: #1e293b; font-size: 18px; }
+        .news-card p { margin: 0; color: #475569; font-size: 14px; line-height: 1.5; }
+        .admin-link { display: block; text-align: center; margin-top: 30px; color: #64748b; font-size: 13px; text-decoration: none; }
+        .admin-link:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
 
-    <div class="card">
-        <!-- GİRİŞ EKRANI -->
-        <div id="loginScreen">
-            <h2>🔐 Yönetici Girişi</h2>
-            <label>Yönetici Şifresi</label>
-            <input type="password" id="adminPass" placeholder="Şifrenizi girin">
-            <button onclick="checkLogin()">Giriş Yap</button>
-            <div id="loginMsg" class="msg"></div>
+    <div class="container">
+        <h1>⛽ Afyon Akaryakıt Güncel Bilgiler</h1>
+
+        <!-- DUYURU ALANI -->
+        <div id="newsContainer" class="news-card">
+            <h3 id="newsTitleDisplay"></h3>
+            <p id="newsContentDisplay"></p>
         </div>
 
-        <!-- YÖNETİM PANELİ -->
-        <div id="adminPanel">
-            <h2>📢 Duyuru / Zam Ekle</h2>
-            <label>Duyuru Başlığı</label>
-            <input type="text" id="newsTitle" placeholder="Örn: Benzine Zam Geldi!">
-            
-            <label>Duyuru İçeriği</label>
-            <textarea id="newsContent" rows="4" placeholder="Örn: Yarından itibaren geçerli olmak üzere..."></textarea>
-            
-            <button onclick="publishNews()">Duyuruyu Yayınla 🚀</button>
-            <div id="newsMsg" class="msg"></div>
-
-            <button class="logout-btn" onclick="logout()">Çıkış Yap</button>
-        </div>
+        <a href="admin.html" class="admin-link">Yönetim Paneline Git</a>
     </div>
 
     <script>
-        const ADMIN_PASSWORD = "123";
-
         window.onload = function() {
-            const isAuth = sessionStorage.getItem("isAdminAuth");
-            if (isAuth === "true") {
-                showPanel();
-            } else {
-                document.getElementById("loginScreen").style.display = "block";
+            const savedNews = localStorage.getItem("activeNews");
+            if (savedNews) {
+                try {
+                    const news = JSON.parse(savedNews);
+                    if (news.title && news.content) {
+                        document.getElementById("newsTitleDisplay").textContent = "📢 " + news.title;
+                        document.getElementById("newsContentDisplay").textContent = news.content;
+                        document.getElementById("newsContainer").style.display = "block";
+                    }
+                } catch (e) {
+                    console.error("Duyuru okunurken hata oluştu");
+                }
             }
         };
-
-        function checkLogin() {
-            const pass = document.getElementById("adminPass").value;
-            const msg = document.getElementById("loginMsg");
-
-            if (pass === ADMIN_PASSWORD) {
-                sessionStorage.setItem("isAdminAuth", "true");
-                showPanel();
-            } else {
-                msg.textContent = "Hatalı şifre!";
-                msg.className = "msg error";
-            }
-        }
-
-        function showPanel() {
-            document.getElementById("loginScreen").style.display = "none";
-            document.getElementById("adminPanel").style.display = "block";
-        }
-
-        function logout() {
-            sessionStorage.removeItem("isAdminAuth");
-            location.reload();
-        }
-
-        function publishNews() {
-            const title = document.getElementById("newsTitle").value.trim();
-            const content = document.getElementById("newsContent").value.trim();
-            const msg = document.getElementById("newsMsg");
-
-            if (!title || !content) {
-                msg.textContent = "Lütfen başlık ve içerik alanlarını doldurun.";
-                msg.className = "msg error";
-                return;
-            }
-
-            try {
-                // Duyuruyu tarayıcı hafızasına kaydediyoruz
-                const newsData = { title: title, content: content, date: new Date().toISOString() };
-                localStorage.setItem("activeNews", JSON.stringify(newsData));
-
-                msg.textContent = "✅ Duyuru başarıyla yayınlandı!";
-                msg.className = "msg success";
-                document.getElementById("newsTitle").value = "";
-                document.getElementById("newsContent").value = "";
-            } catch (err) {
-                msg.textContent = "Yayınlama hatası oluştu.";
-                msg.className = "msg error";
-            }
-        }
     </script>
 </body>
 </html>
