@@ -72,10 +72,13 @@
         .station-address { font-size: 12px; color: #64748b; margin-bottom: 10px; }
         .distance-badge { background: #e0f2fe; color: #0369a1; padding: 5px 10px; border-radius: 8px; font-size: 12px; font-weight: bold; }
         
-        .prices { display: flex; justify-content: space-between; background: #f8fafc; padding: 10px; border-radius: 10px; margin-top: 10px; font-size: 13px; text-align: center; }
+        .prices { display: flex; justify-content: space-between; background: #f8fafc; padding: 10px; border-radius: 10px; margin-top: 10px; font-size: 13px; text-align: center; gap: 10px; }
         .price-item { flex: 1; }
         .price-label { color: #64748b; font-size: 11px; margin-bottom: 3px; text-transform: uppercase; font-weight: bold; }
         .price-val { font-weight: bold; color: #dc2626; font-size: 14px; }
+
+        .report-btn { background: #f1f5f9; border: 1px solid #cbd5e1; color: #475569; padding: 8px 10px; border-radius: 8px; font-size: 12px; cursor: pointer; font-weight: bold; margin-top: 10px; width: 100%; transition: background 0.2s; }
+        .report-btn:hover { background: #e2e8f0; }
 
         .route-btn-container { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
         .route-btn { width: 100%; padding: 10px; background: #0f172a; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 12px; cursor: pointer; text-decoration: none; text-align: center; display: block; }
@@ -148,6 +151,7 @@
         </div>
     </div>
 
+    <!-- YASAL UYARI MODAL -->
     <div id="legalModal" class="modal-overlay" onclick="handleOutsideClick(event)">
         <div class="modal-box">
             <div class="modal-header">
@@ -159,6 +163,37 @@
                 <p>Bu uygulama bağımsız bir rehber olarak tasarlanmıştır. Sunulan akaryakıt fiyatları bilgilendirme amaçlı olup anlık değişiklik gösterebilir.</p>
                 <h4>🔒 Gizlilik Politikası (Privacy Policy)</h4>
                 <p>Uygulamamız kullanıcıların konum verilerini yalnızca cihaz üzerinde size en yakın istasyonları hesaplamak ve sıralamak amacıyla anlık olarak işler.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- FİYAT BİLDİR MODAL -->
+    <div id="reportModal" class="modal-overlay" onclick="handleReportOutsideClick(event)">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3 id="reportModalTitle">📝 Fiyat veya Bilgi Bildir</h3>
+                <button class="close-btn" onclick="closeReportModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="reportStationId">
+                <p style="margin-top:0; font-weight:bold; color:#2563eb;" id="reportStationName"></p>
+                
+                <div style="margin-bottom: 12px;">
+                    <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:4px;">Benzin Fiyatı (TL):</label>
+                    <input type="number" step="0.01" id="reportBenzin" class="search-box" style="margin-bottom:0;" placeholder="Örn: 42.50">
+                </div>
+
+                <div style="margin-bottom: 12px;">
+                    <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:4px;">Motorin Fiyatı (TL):</label>
+                    <input type="number" step="0.01" id="reportMotorin" class="search-box" style="margin-bottom:0;" placeholder="Örn: 43.10">
+                </div>
+
+                <div style="margin-bottom: 12px;">
+                    <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:4px;">Not / Açıklama (Opsiyonel):</label>
+                    <input type="text" id="reportNote" class="search-box" style="margin-bottom:0;" placeholder="Örn: LPG fiyatı veya tabela farklıydı...">
+                </div>
+
+                <button class="btn" style="width:100%; margin-top:10px;" onclick="submitReport()">Gönder</button>
             </div>
         </div>
     </div>
@@ -183,7 +218,6 @@
         let userLng = 30.5387;
         let currentSort = 'distance';
 
-        // Tamamen kod tabanlı (DivIcon), kare çizgi ve gölge hatası olmayan saf kırmızı pin
         const redIcon = L.divIcon({
             className: 'custom-red-pin',
             html: '<div style="background-color: #dc2626; width: 18px; height: 18px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 8px rgba(0,0,0,0.6);"></div>',
@@ -229,6 +263,59 @@
         function openModal() { document.getElementById('legalModal').classList.add('open'); }
         function closeModal() { document.getElementById('legalModal').classList.remove('open'); }
         function handleOutsideClick(event) { if (event.target.id === 'legalModal') closeModal(); }
+
+        // BİLDİRİM MODAL FONKSİYONLARI
+        function openReportModal(stationId, stationName, benzin, motorin) {
+            document.getElementById('reportStationId').value = stationId;
+            document.getElementById('reportStationName').textContent = stationName;
+            document.getElementById('reportBenzin').value = benzin !== '-' ? parseFloat(benzin) : '';
+            document.getElementById('reportMotorin').value = motorin !== '-' ? parseFloat(motorin) : '';
+            document.getElementById('reportNote').value = '';
+            document.getElementById('reportModal').classList.add('open');
+        }
+
+        function closeReportModal() {
+            document.getElementById('reportModal').classList.remove('open');
+        }
+
+        function handleReportOutsideClick(event) {
+            if (event.target.id === 'reportModal') closeReportModal();
+        }
+
+        async function submitReport() {
+            const stationId = document.getElementById('reportStationId').value;
+            const stationName = document.getElementById('reportStationName').textContent;
+            const benzin = parseFloat(document.getElementById('reportBenzin').value) || null;
+            const motorin = parseFloat(document.getElementById('reportMotorin').value) || null;
+            const note = document.getElementById('reportNote').value.trim();
+
+            if (!benzin && !motorin && !note) {
+                alert("Lütfen en az bir fiyat veya açıklama giriniz.");
+                return;
+            }
+
+            try {
+                const { error } = await _supabase
+                    .from('price_reports')
+                    .insert([
+                        { 
+                            station_id: stationId ? parseInt(stationId) : null, 
+                            station_name: stationName,
+                            reported_benzin: benzin, 
+                            reported_motorin: motorin, 
+                            note: note 
+                        }
+                    ]);
+
+                if (error) throw error;
+
+                alert("Bildiriminiz başarıyla iletildi. Teşekkür ederiz!");
+                closeReportModal();
+            } catch (err) {
+                console.error("Bildirim gönderme hatası:", err);
+                alert("Bildirim gönderilirken bir hata oluştu.");
+            }
+        }
 
         function initApp() {
             const status = document.getElementById('status');
@@ -286,7 +373,6 @@
                       Math.sin(dLon/2) * Math.sin(dLon/2);
             let straightDist = R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
             
-            // Gerçek karayolu / sokak rotası katsayısı (%25 artırılarak Yandex mesafesine yaklaştırıldı)
             return straightDist * 1.25;
         }
 
@@ -378,7 +464,7 @@
                 list.innerHTML += `
                     <div class="card" onclick="focusStationOnMap(${stLat}, ${stLng},${currentMarkerIndex})">
                         <div class="station-header">
-                         <div class="station-title">⛽ ${brandName}</div>
+                            <div class="station-title">⛽ ${brandName}</div>
                             <div class="distance-badge">📍 ${distText}</div>
                         </div>
                         <div class="station-address">📍 ${st.address || ''}</div>
@@ -396,6 +482,9 @@
                                 <div class="price-val">${lpgVal}</div>
                             </div>
                         </div>
+                        <button class="report-btn" onclick="event.stopPropagation(); openReportModal('${st.id || ''}', '${brandName}', '${st.benzin_price || '-'}', '${st.motorin_price || '-'}')">
+                            📝 Fiyat / Bilgi Bildir
+                        </button>
                     </div>
                 `;
             });
