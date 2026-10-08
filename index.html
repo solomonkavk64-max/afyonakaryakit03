@@ -175,8 +175,8 @@
                 <h4>2. Bilgi Doğruluğu & Fiyat Değişiklikleri</h4>
                 <p>Uygulamada gösterilen akaryakıt ve LPG fiyatları bilgilendirme amaçlıdır. İstasyonlardaki tabela fiyatlarıyla anlık farklar olabilir. Doğabilecek zararlardan uygulamamız sorumlu tutulamaz.</p>
 
-                <h4>3. Görsel Yükleme ve Telif Kuralları</h4>
-                <p>Yüklenen fotoğraflarda 3. kişilerin kişilik haklarını ihlal edecek unsurlar (insan yüzleri, plaka vb.) bulunmamalıdır. Telif hakkı içeren görseller yüklenemez. Aksi durumlarda adli makamlara kullanıcı IP ve bağlantı verileri iletilecektir.</p>
+                <h4>3. Görsel Yükleme ve Onay Mekanizması</h4>
+                <p>Yüklenen görseller ve bildirimler yönetici onayından geçtikten sonra yayına alınır. Görsellerde 3. kişilerin kişilik haklarını ihlal edecek unsurlar (insan yüzleri, plaka vb.) bulunmamalıdır.</p>
 
                 <h4>4. Uyar - Kaldır (İhlal Bildirimi)</h4>
                 <p>Telif, kişilik hakkı veya içerik ihlali talepleriniz için bize ulaşabilirsiniz. İncelenen içerikler en geç 48 saat içerisinde sistemden kaldırılır.</p>
@@ -314,7 +314,7 @@
             document.getElementById('reportLpg').value = lpg !== '-' ? parseFloat(lpg) : '';
             document.getElementById('reportPhoto').value = '';
             document.getElementById('reportNote').value = '';
-            document.getElementById('legalConsent').checked = false; // Kutucuğu sıfırla
+            document.getElementById('legalConsent').checked = false;
             document.getElementById('reportModal').classList.add('open');
         }
 
@@ -337,13 +337,11 @@
             const photoInput = document.getElementById('reportPhoto');
             const legalConsent = document.getElementById('legalConsent');
 
-            // 1. DOLDURMA KONTROLÜ
             if (!benzin && !motorin && !lpg && !note && (!photoInput.files || photoInput.files.length === 0)) {
                 alert("Lütfen en az bir fiyat, açıklama veya tabela fotoğrafı ekleyiniz.");
                 return;
             }
 
-              // 2. YASAL ONAY KUTUSU KONTROLÜ
             if (!legalConsent.checked) {
                 alert("Devam edebilmek için lütfen yasal bildirim ve onay kutusunu işaretleyiniz.");
                 return;
@@ -355,11 +353,9 @@
                 submitBtn.disabled = true;
                 submitBtn.textContent = "Gönderiliyor...";
 
-                // FOTOĞRAF YÜKLEME VE BOYUT KONTROLÜ
                 if (photoInput.files && photoInput.files.length > 0) {
                     const file = photoInput.files[0];
 
-                    // 5 MB Boyut Sınırı Kontrolü (5 * 1024 * 1024 bytes)
                     if (file.size > 5242880) {
                         alert("Yükleyeceğiniz fotoğraf 5 MB'tan büyük olamaz.");
                         submitBtn.disabled = false;
@@ -376,15 +372,11 @@
 
                     if (uploadError) throw uploadError;
 
-                    // Görselin Public Erişim Linkini Al
-                    const { data: urlData } = _supabase.storage
-                        .from('station-photos')
-                        .getPublicUrl(fileName);
-
-                    photoUrl = urlData.publicUrl;
+                    // Fotoğraf yolunu kaydediyoruz
+                    photoUrl = fileName;
                 }
 
-                // VERİTABANINA BİLDİRİM KAYDI
+                // is_approved varsayılan olarak false kaydedilir (Siz onaylayana kadar görünmez)
                 const { error } = await _supabase
                     .from('price_reports')
                     .insert([
@@ -395,13 +387,14 @@
                             reported_motorin: motorin, 
                             reported_lpg: lpg,
                             note: note,
-                            photo_url: photoUrl
+                            photo_url: photoUrl,
+                            is_approved: false
                         }
                     ]);
 
                 if (error) throw error;
 
-                alert("Bildiriminiz ve fotoğrafınız başarıyla iletildi. Teşekkür ederiz!");
+                alert("Bildiriminiz yönetici onayına gönderilmiştir. İnceleme sonrası yayına alınacaktır. Teşekkür ederiz!");
                 closeReportModal();
             } catch (err) {
                 console.error("Bildirim gönderme hatası:", err);
