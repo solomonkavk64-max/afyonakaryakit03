@@ -89,7 +89,7 @@
         }
         .modal-overlay.open { opacity: 1; visibility: visible; }
         .modal-box {
-            background: white; width: 90%; max-width: 450px; border-radius: 16px; padding: 22px;
+            background: white; width: 90%; max-width: 480px; border-radius: 16px; padding: 22px;
             box-shadow: 0 10px 25px rgba(0,0,0,0.2); transform: translateY(20px); transition: transform 0.3s ease;
         }
         .modal-overlay.open .modal-box { transform: translateY(0); }
@@ -99,6 +99,17 @@
         .modal-body { font-size: 13px; color: #334155; line-height: 1.6; max-height: 65vh; overflow-y: auto; }
         .modal-body h4 { color: #0f172a; margin-top: 12px; margin-bottom: 4px; font-size: 13px; }
         
+        .legal-consent-box {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 10px;
+            margin-bottom: 12px;
+            font-size: 11px;
+            color: #475569;
+        }
+
         .footer-link-container { text-align: center; margin-top: 25px; padding-top: 15px; border-top: 1px solid #e2e8f0; }
         .footer-link-container button { background: none; border: none; color: #2563eb; font-size: 13px; font-weight: bold; cursor: pointer; text-decoration: underline; }
     </style>
@@ -146,22 +157,32 @@
         <div id="list"></div>
 
         <div class="footer-link-container">
-            <button onclick="openModal()">⚠ Yasal Uyarı & Gizlilik Politikası</button>
+            <button onclick="openModal()">⚠ Yasal Uyarı, Gizlilik & Kullanım Şartları</button>
         </div>
     </div>
 
-    <!-- YASAL UYARI MODAL -->
+    <!-- YASAL UYARI & DETAYLI KULLANIM ŞARTLARI MODALI -->
     <div id="legalModal" class="modal-overlay" onclick="handleOutsideClick(event)">
         <div class="modal-box">
             <div class="modal-header">
-                <h3>Yasal Uyarı & Gizlilik Politikası</h3>
+                <h3>Yasal Bildirim, Sorumluluk Reddi & Kullanım Şartları</h3>
                 <button class="close-btn" onclick="closeModal()">×</button>
             </div>
             <div class="modal-body">
-                <h4>⚠ Sorumluluk Reddi (Disclaimer)</h4>
-                <p>Bu uygulama bağımsız bir rehber olarak tasarlanmıştır. Sunulan akaryakıt fiyatları bilgilendirme amaçlı olup anlık değişiklik gösterebilir.</p>
-                <h4>🔒 Gizlilik Politikası (Privacy Policy)</h4>
-                <p>Uygulamamız kullanıcıların konum verilerini yalnızca cihaz üzerinde size en yakın istasyonları hesaplamak ve sıralamak amacıyla anlık olarak işler.</p>
+                <h4>1. Yer Sağlayıcı Sorumluluğu (5651 Sayılı Kanun)</h4>
+                <p>Bu uygulama 5651 sayılı Kanun uyarınca <strong>"Yer Sağlayıcı"</strong> konumundadır. Kullanıcılar tarafından sisteme eklenen fiyatlar, fotoğraflar ve açıklamaların içerik doğruluğu, telif hakları ve hukuki sorumluluğu tamamen içerik yükleyen kullanıcıya aittir.</p>
+
+                <h4>2. Bilgi Doğruluğu & Fiyat Değişiklikleri</h4>
+                <p>Uygulamada gösterilen akaryakıt ve LPG fiyatları bilgilendirme amaçlıdır. İstasyonlardaki tabela fiyatlarıyla anlık farklar olabilir. Doğabilecek zararlardan uygulamamız sorumlu tutulamaz.</p>
+
+                <h4>3. Görsel Yükleme ve Telif Kuralları</h4>
+                <p>Yüklenen fotoğraflarda 3. kişilerin kişilik haklarını ihlal edecek unsurlar (insan yüzleri, plaka vb.) bulunmamalıdır. Telif hakkı içeren görseller yüklenemez. Aksi durumlarda adli makamlara kullanıcı IP ve bağlantı verileri iletilecektir.</p>
+
+                <h4>4. Uyar - Kaldır (İhlal Bildirimi)</h4>
+                <p>Telif, kişilik hakkı veya içerik ihlali talepleriniz için bize ulaşabilirsiniz. İncelenen içerikler en geç 48 saat içerisinde sistemden kaldırılır.</p>
+
+                <h4>5. Gizlilik ve Konum Politikası</h4>
+                <p>Konum verileriniz yalnızca size en yakın istasyonları hesaplamak ve sıralamak amacıyla anlık işlenir, sunucularda saklanmaz.</p>
             </div>
         </div>
     </div>
@@ -192,10 +213,10 @@
                     <input type="number" step="0.01" id="reportLpg" class="search-box" style="margin-bottom:0;" placeholder="Örn: 22.40">
                 </div>
 
-                <!-- Tabela Fotoğrafı Alanı -->
+                <!-- Tabela Fotoğrafı Yükleme Alanı -->
                 <div style="margin-bottom: 12px;">
-                    <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:4px;">📷 Tabelanın Fotoğrafını Çek / Yükle:</label>
-                    <input type="file" id="reportPhoto" accept="image/*" capture="environment" class="search-box" style="margin-bottom:0; padding:8px;">
+                    <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:4px;">📷 Tabelanın Fotoğrafını Çek / Yükle (Maks. 5 MB):</label>
+                    <input type="file" id="reportPhoto" accept="image/jpeg, image/png, image/webp" capture="environment" class="search-box" style="margin-bottom:0; padding:8px;">
                 </div>
 
                 <div style="margin-bottom: 12px;">
@@ -203,7 +224,17 @@
                     <input type="text" id="reportNote" class="search-box" style="margin-bottom:0;" placeholder="Örn: Tabela fotoğrafı eklendi...">
                 </div>
 
-                <button class="btn" id="submitReportBtn" style="width:100%; margin-top:10px;" onclick="submitReport()">Gönder</button>
+                <!-- YASAL KULLANICI ONAY KUTUSU -->
+                <div class="legal-consent-box">
+                    <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer;">
+                        <input type="checkbox" id="legalConsent" style="margin-top: 2px;">
+                        <span>
+                            Görsel/bilgi yükleyerek; paylaştığım içeriğin 5651 sayılı Kanun ve KVKK uyarınca tüm sorumluluğunun tarafıma ait olduğunu ve <a href="javascript:void(0)" onclick="openModal()" style="color:#2563eb; text-decoration:underline;">Yasal Koşullar</a>'ı kabul ettiğimi onaylıyorum.
+                        </span>
+                    </label>
+                </div>
+
+                <button class="btn" id="submitReportBtn" style="width:100%; margin-top:5px;" onclick="submitReport()">Gönder</button>
             </div>
         </div>
     </div>
@@ -283,6 +314,7 @@
             document.getElementById('reportLpg').value = lpg !== '-' ? parseFloat(lpg) : '';
             document.getElementById('reportPhoto').value = '';
             document.getElementById('reportNote').value = '';
+            document.getElementById('legalConsent').checked = false; // Kutucuğu sıfırla
             document.getElementById('reportModal').classList.add('open');
         }
 
@@ -303,21 +335,38 @@
             const lpg = parseFloat(document.getElementById('reportLpg').value) || null;
             const note = document.getElementById('reportNote').value.trim();
             const photoInput = document.getElementById('reportPhoto');
-            
-            let photoUrl = null;
+            const legalConsent = document.getElementById('legalConsent');
 
+            // 1. DOLDURMA KONTROLÜ
             if (!benzin && !motorin && !lpg && !note && (!photoInput.files || photoInput.files.length === 0)) {
                 alert("Lütfen en az bir fiyat, açıklama veya tabela fotoğrafı ekleyiniz.");
                 return;
             }
 
+              // 2. YASAL ONAY KUTUSU KONTROLÜ
+            if (!legalConsent.checked) {
+                alert("Devam edebilmek için lütfen yasal bildirim ve onay kutusunu işaretleyiniz.");
+                return;
+            }
+
+            let photoUrl = null;
+
             try {
                 submitBtn.disabled = true;
                 submitBtn.textContent = "Gönderiliyor...";
 
-                // FOTOĞRAF YÜKLEME İŞLEMİ
+                // FOTOĞRAF YÜKLEME VE BOYUT KONTROLÜ
                 if (photoInput.files && photoInput.files.length > 0) {
                     const file = photoInput.files[0];
+
+                    // 5 MB Boyut Sınırı Kontrolü (5 * 1024 * 1024 bytes)
+                    if (file.size > 5242880) {
+                        alert("Yükleyeceğiniz fotoğraf 5 MB'tan büyük olamaz.");
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = "Gönder";
+                        return;
+                    }
+
                     const fileExt = file.name.split('.').pop();
                     const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
 
@@ -327,7 +376,7 @@
 
                     if (uploadError) throw uploadError;
 
-                    // Yüklenen fotoğrafın erişim linkini al
+                    // Görselin Public Erişim Linkini Al
                     const { data: urlData } = _supabase.storage
                         .from('station-photos')
                         .getPublicUrl(fileName);
