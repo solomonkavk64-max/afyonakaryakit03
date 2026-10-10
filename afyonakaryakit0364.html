@@ -46,31 +46,23 @@
             <label>Duyuru İçeriği</label>
             <textarea id="newsContent" rows="4" placeholder="Örn: Motorin grubuna fiyat artışı yansıtıldı."></textarea>
             
-            <button onclick="publishNews()">Duyuruyu Yayınla & Bildirim Gönder</button>
+            <button onclick="publishNews()">🚀 Duyuruyu Yayınla & Bildirim Gönder</button>
             <div id="newsMsg" class="msg"></div>
 
             <button class="logout-btn" onclick="logout()">Çıkış Yap</button>
         </div>
     </div>
 
-    <!-- OneSignal SDK (Yönetici panelinden bildirim tetikleyebilmek için) -->
-    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
     <script>
-        window.OneSignalDeferred = window.OneSignalDeferred || [];
-        window.OneSignalDeferred.push(async function(OneSignal) {
-            await OneSignal.init({
-                appId: "cdd62720-5e48-4f25-b3f2-4b0e3977bf23",
-                serviceWorkerPath: "OneSignalSDKWorker.js",
-                serviceWorkerParam: { scope: "/afyonakaryakit03/" },
-                allowLocalhostAsSecureOrigin: true
-            });
-        });
-
         const SUPABASE_URL = 'https://dzapuhihjzdmzvwzcxht.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_atDC1UU40N7N-U-c3u__4A_mKuI2Oum';
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         const ADMIN_PASSWORD = "Afyon0364.,";
+
+        // ONESIGNAL BİLGİLERİ
+        const ONESIGNAL_APP_ID = "cdd62720-5e48-4f25-b3f2-4b0e3977bf23";
+        const ONESIGNAL_REST_API_KEY = "os_v2_app_zxlcoic6jbhslm7sjmhds557ensqzaeo6vhea2vkp4monag5exk4b6urvyf42mulx4zxf32fez3dkuszyvem25sjf6ivsbnrqxbu4oa";
 
         window.onload = function() {
             const isAuth = sessionStorage.getItem("isAdminAuth");
@@ -115,34 +107,44 @@
                 return;
             }
 
-            msg.textContent = "Yayınlanıyor ve bildirim gönderiliyor...";
+            msg.textContent = "Yayınlanıyor ve bildirim atılıyor...";
             msg.className = "msg";
 
             try {
-                // 1. Supabase 'news' tablosuna kaydetme
+                // 1. Supabase 'news' tablosuna duyuruyu kaydedelim
                 const { error } = await _supabase
                     .from('news')
                     .insert([{ title: title, content: content, created_at: new Date() }]);
 
                 if (error) throw error;
 
-                // 2. OneSignal SDK üzerinden tüm kullanıcılara push bildirim tetikleme
-                window.OneSignalDeferred.push(async function(OneSignal) {
-                    await OneSignal.User.addEmail ? null : null; // SDK hazırlık kontrolü
-                    // Not: OneSignal v16 tarayıcı SDK'sı üzerinden doğrudan dışarıya "All" segmentine 
-                    // REST API anahtarı olmadan istek atılamaz (güvenlik nedeniyle). 
-                    // Ancak OneSignal.Notifications.requestPermission veya harici tetikleyici kullanılabilir.
+                // 2. OneSignal REST API ile anlık otomatik bildirim gönderelim
+                const response = await fetch("https://onesignal.com/api/v1/notifications", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json; charset=utf-8",
+                        "Authorization": "Basic " + ONESIGNAL_REST_API_KEY
+                    },
+                    body: JSON.stringify({
+                        app_id: ONESIGNAL_APP_ID,
+                        included_segments: ["All"],
+                        headings: { "tr": title, "en": title },
+                        contents: { "tr": content, "en": content },
+                        url: "https://solomonkavk64-max.github.io/afyonakaryakit03/"
+                    })
                 });
 
-                // Alternatif ve en garanti yöntem olarak OneSignal Notification API çağrısı veya kullanıcıları bilgilendirme:
-                msg.textContent = "✅ Duyuru yayınlandı! (Bildirim gitmesi için OneSignal panelinden manuel tetikleyebilir veya backend entegrasyonu kullanabilirsiniz)";
+                const resData = await response.json();
+                console.log("OneSignal Yanıtı:", resData);
+
+                msg.textContent = "✅ Duyuru yayınlandı ve bildirim başarıyla tüm abonelere gönderildi!";
                 msg.className = "msg success";
                 document.getElementById("newsTitle").value = "";
                 document.getElementById("newsContent").value = "";
 
             } catch (err) {
-                console.error(err);
-                msg.textContent = "Yayınlama sırasında hata oluştu!";
+                console.error("Hata:", err);
+                msg.textContent = "İşlem sırasında hata oluştu: " + err.message;
                 msg.className = "msg error";
             }
         }
