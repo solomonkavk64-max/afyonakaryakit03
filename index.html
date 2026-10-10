@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Afyonkarahisar Akaryakıt Fiyatları ve Takip</title>
     
-    <!-- PWABuilder ve Play Store İçin Manifest Bağlantısı Eklendi -->
+    <!-- PWABuilder ve Play Store İçin Manifest Bağlantısı -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#d9534f">
 
@@ -13,45 +13,6 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <!-- Supabase JS Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-            <!-- OneSignal Web Push SDK v16 -->
-    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
-    <script>
-      window.OneSignalDeferred = window.OneSignalDeferred || [];
-      window.OneSignalDeferred.push(async function(OneSignal) {
-        try {
-          await OneSignal.init({
-            appId: "cdd62720-5e48-4f25-b3f2-4b0e3977bf23",
-            serviceWorkerPath: "OneSignalSDKWorker.js",
-            serviceWorkerParam: { scope: "/afyonakaryakit03/" },
-            allowLocalhostAsSecureOrigin: true
-          });
-          console.log("OneSignal başarıyla başlatıldı.");
-        } catch (e) {
-          console.error("OneSignal başlatma hatası:", e);
-        }
-      });
-
-      // Butona basıldığında doğrudan OneSignal kullanıcı iznini tetikleyen kesin çözüm fonksiyonu
-      async function subscribeOneSignal() {
-          if (window.OneSignal) {
-              try {
-                  // Kullanıcıdan doğrudan tarayıcı push bildirim izni ister ve aboneyi OneSignal'e kaydeder
-                  const permission = await OneSignal.Notifications.requestPermission();
-                  if (permission) {
-                      alert("✅ Bildirim izni başarıyla verildi! Artık abonesiniz.");
-                  } else {
-                      alert("⚠ Bildirim izni reddedildi.");
-                  }
-              } catch (err) {
-                  console.error("Abonelik hatası:", err);
-                  alert("İzin istenirken hata oluştu: " + err.message);
-              }
-          } else {
-              alert("OneSignal henüz yüklenmedi. Lütfen sayfayı yenileyip tekrar deneyin.");
-          }
-      }
-    </script>
 
     <style>
         * { box-sizing: border-box; }
@@ -165,7 +126,7 @@
         <div class="splash-content">
             <div class="splash-logo">⛽</div>
             <h1>Afyon Akaryakıt</h1>
-            <p>Fiyatlar dan İstasyon Takip Sistemi</p>
+            <p>Fiyatlar ve İstasyon Takip Sistemi</p>
         </div>
     </div>
 
@@ -178,9 +139,9 @@
     <div id="map"></div>
 
     <div class="container">
-        <!-- BİLDİRİMLERİ AÇ BUTONU -->
+        <!-- YEREL BİLDİRİM İZNİ BUTONU -->
         <div style="margin-bottom: 12px;">
-            <button class="btn" style="background: #dc2626;" onclick="subscribeOneSignal()">🔔 Bildirimleri Aç / Abone Ol</button>
+            <button class="btn" style="background: #dc2626;" onclick="requestNotificationPermission()">🔔 Sesli Bildirimleri Aktif Et</button>
         </div>
 
         <!-- DUYURU BANDI -->
@@ -211,7 +172,7 @@
         </div>
     </div>
 
-    <!-- YASAL UYARI & DETAYLI KULLANIM ŞARTLARI MODALI -->
+    <!-- YASAL UYARI MODALI -->
     <div id="legalModal" class="modal-overlay" onclick="handleOutsideClick(event)">
         <div class="modal-box">
             <div class="modal-header">
@@ -220,19 +181,7 @@
             </div>
             <div class="modal-body">
                 <h4>1. Yer Sağlayıcı Sorumluluğu (5651 Sayılı Kanun)</h4>
-                <p>Bu uygulama 5651 sayılı Kanun uyarınca <strong>"Yer Sağlayıcı"</strong> konumundadır. Kullanıcılar tarafından sisteme eklenen fiyatlar, fotoğraflar ve açıklamaların içerik doğruluğu, telif hakları ve hukuki sorumluluğu tamamen içerik yükleyen kullanıcıya aittir.</p>
-
-                <h4>2. Bilgi Doğruluğu & Fiyat Değişiklikleri</h4>
-                <p>Uygulamada gösterilen akaryakıt ve LPG fiyatları bilgilendirme amaçlıdır. İstasyonlardaki tabela fiyatlarıyla anlık farklar olabilir. Doğabilecek zararlardan uygulamamız sorumlu tutulamaz.</p>
-
-                <h4>3. Görsel Yükleme ve Onay Mekanizması</h4>
-                <p>Yüklenen görseller ve bildirimler yönetici onayından geçtikten sonra yayına alınır. Görsellerde 3. kişilerin kişilik haklarını ihlal edecek unsurlar (insan yüzleri, plaka vb.) bulunmamalıdır.</p>
-
-                <h4>4. Uyar - Kaldır (İhlal Bildirimi)</h4>
-                <p>Telif, kişilik hakkı veya içerik ihlali talepleriniz için bize ulaşabilirsiniz. İncelenen içerikler en geç 48 saat içerisinde sistemden kaldırılır.</p>
-
-                <h4>5. Gizlilik ve Konum Politikası</h4>
-                <p>Konum verileriniz yalnızca size en yakın istasyonları hesaplamak ve sıralamak amacıyla anlık işlenir, sunucularda saklanmaz.</p>
+                <p>Bu uygulama 5651 sayılı Kanun uyarınca <strong>"Yer Sağlayıcı"</strong> konumundadır.</p>
             </div>
         </div>
     </div>
@@ -263,7 +212,6 @@
                     <input type="number" step="0.01" id="reportLpg" class="search-box" style="margin-bottom:0;" placeholder="Örn: 22.40">
                 </div>
 
-                <!-- Tabela Fotoğrafı Yükleme Alanı -->
                 <div style="margin-bottom: 12px;">
                     <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:4px;">📷 Tabelanın Fotoğrafını Çek / Yükle (Maks. 5 MB):</label>
                     <input type="file" id="reportPhoto" accept="image/jpeg, image/png, image/webp" capture="environment" class="search-box" style="margin-bottom:0; padding:8px;">
@@ -274,12 +222,11 @@
                     <input type="text" id="reportNote" class="search-box" style="margin-bottom:0;" placeholder="Örn: Tabela fotoğrafı eklendi...">
                 </div>
 
-                <!-- YASAL KULLANICI ONAY KUTUSU -->
                 <div class="legal-consent-box">
                     <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer;">
                         <input type="checkbox" id="legalConsent" style="margin-top: 2px;">
                         <span>
-                            Görsel/bilgi yükleyerek; paylaştığım içeriğin 5651 sayılı Kanun ve KVKK uyarınca tüm sorumluluğunun tarafıma ait olduğunu ve <a href="javascript:void(0)" onclick="openModal()" style="color:#2563eb; text-decoration:underline;">Yasal Koşullar</a>'ı kabul ettiğimi onaylıyorum.
+                            Görsel/bilgi yükleyerek tüm sorumluluğun tarafıma ait olduğunu ve <a href="javascript:void(0)" onclick="openModal()" style="color:#2563eb; text-decoration:underline;">Yasal Koşullar</a>'ı kabul ediyorum.
                         </span>
                     </label>
                 </div>
@@ -324,44 +271,85 @@
 
             loadNews();
             initApp();
+            setupRealtimeNews(); // Canlı veritabanı dinleyicisi aktif
         };
 
-        // OneSignal Bildirim İzni İsteme Fonksiyonu
-        function subscribeOneSignal() {
-            window.OneSignalDeferred = window.OneSignalDeferred || [];
-            window.OneSignalDeferred.push(async function(OneSignal) {
-                try {
-                    await OneSignal.Slidedown.promptPush({ force: true });
-                } catch (e) {
-                    console.error("Bildirim tetikleme hatası:", e);
-                    await OneSignal.Notifications.requestPermission();
+        // Tarayıcı Sesli Bildirim İzni İsteme Fonksiyonu
+        function requestNotificationPermission() {
+            if (!("Notification" in window)) {
+                alert("Tarayıcınız bildirim özelliğini desteklemiyor.");
+                return;
+            }
+            Notification.requestPermission().then(permission => {
+                if (permission === "granted") {
+                    alert("✅ Bildirim izni başarıyla verildi! Yeni duyurularda sesli uyarı alacaksınız.");
+                    playNotificationSound();
+                } else {
+                    alert("⚠ Bildirim izni reddedildi.");
                 }
             });
         }
 
+        // Web Audio API ile Ses Çalma
+        function playNotificationSound() {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5 Notası
+                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.3);
+            } catch (e) {
+                console.log("Ses çalınamadı:", e);
+            }
+        }
+
+        // Supabase Realtime ile Canlı Duyuru Dinleme
+        function setupRealtimeNews() {
+            _supabase
+                .channel('public:news')
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'news' }, payload => {
+                    const newNews = payload.new;
+                    displayNewsBanner(newNews);
+
+                    if (Notification.permission === "granted") {
+                        new Notification("📢 " + newNews.title, {
+                            body: newNews.content
+                        });
+                        playNotificationSound();
+                    }
+                })
+                .subscribe();
+        }
+
         async function loadNews() {
             try {
-                const { data, error } = await _supabase
+                const { data } = await _supabase
                     .from('news')
                     .select('*')
                     .order('created_at', { ascending: false })
                     .limit(1);
 
                 if (data && data.length > 0) {
-                    const news = data[0];
-                    document.getElementById("bannerTitle").textContent = "📢 " + news.title;
-                    document.getElementById("bannerContent").textContent = news.content;
-                    
-                    if(news.created_at) {
-                        const dateObj = new Date(news.created_at);
-                        document.getElementById("newsDate").textContent = "Yayınlanma: " + dateObj.toLocaleDateString('tr-TR') + " " + dateObj.toLocaleTimeString('tr-TR', {hour: '2-digit', minute:'2-digit'});
-                    }
-
-                    document.getElementById("newsBanner").style.display = "block";
+                    displayNewsBanner(data[0]);
                 }
             } catch (e) {
                 console.error("Duyuru yüklenirken hata:", e);
             }
+        }
+
+        function displayNewsBanner(news) {
+            document.getElementById("bannerTitle").textContent = "📢 " + news.title;
+            document.getElementById("bannerContent").textContent = news.content;
+            if(news.created_at) {
+                const dateObj = new Date(news.created_at);
+                document.getElementById("newsDate").textContent = "Yayınlanma: " + dateObj.toLocaleDateString('tr-TR') + " " + dateObj.toLocaleTimeString('tr-TR', {hour: '2-digit', minute:'2-digit'});
+            }
+            document.getElementById("newsBanner").style.display = "block";
         }
 
         function openModal() { document.getElementById('legalModal').classList.add('open'); }
@@ -380,13 +368,8 @@
             document.getElementById('reportModal').classList.add('open');
         }
 
-        function closeReportModal() {
-            document.getElementById('reportModal').classList.remove('open');
-        }
-
-        function handleReportOutsideClick(event) {
-            if (event.target.id === 'reportModal') closeReportModal();
-        }
+        function closeReportModal() { document.getElementById('reportModal').classList.remove('open'); }
+        function handleReportOutsideClick(event) { if (event.target.id === 'reportModal') closeReportModal(); }
 
         async function submitReport() {
             const submitBtn = document.getElementById('submitReportBtn');
@@ -417,43 +400,33 @@
 
                 if (photoInput.files && photoInput.files.length > 0) {
                     const file = photoInput.files[0];
-
                     if (file.size > 5242880) {
                         alert("Yükleyeceğiniz fotoğraf 5 MB'tan büyük olamaz.");
                         submitBtn.disabled = false;
                         submitBtn.textContent = "Gönder";
                         return;
                     }
-
                     const fileExt = file.name.split('.').pop();
                     const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
-
-                    const { data: uploadData, error: uploadError } = await _supabase.storage
-                        .from('station-photos')
-                        .upload(fileName, file);
-
+                    const { error: uploadError } = await _supabase.storage.from('station-photos').upload(fileName, file);
                     if (uploadError) throw uploadError;
                     photoUrl = fileName;
                 }
 
-                const { error } = await _supabase
-                    .from('price_reports')
-                    .insert([
-                        { 
-                            station_id: stationId ? parseInt(stationId) : null, 
-                            station_name: stationName,
-                            reported_benzin: benzin, 
-                            reported_motorin: motorin, 
-                            reported_lpg: lpg,
-                            note: note,
-                            photo_url: photoUrl,
-                            is_approved: false
-                        }
-                    ]);
+                const { error } = await _supabase.from('price_reports').insert([{ 
+                    station_id: stationId ? parseInt(stationId) : null, 
+                    station_name: stationName,
+                    reported_benzin: benzin, 
+                    reported_motorin: motorin, 
+                    reported_lpg: lpg,
+                    note: note,
+                    photo_url: photoUrl,
+                    is_approved: false
+                }]);
 
                 if (error) throw error;
 
-                alert("Bildiriminiz yönetici onayına gönderilmiştir. İnceleme sonrası yayına alınacaktır. Teşekkür ederiz!");
+                alert("Bildiriminiz yönetici onayına gönderilmiştir. Teşekkür ederiz!");
                 closeReportModal();
             } catch (err) {
                 console.error("Bildirim gönderme hatası:", err);
@@ -479,11 +452,9 @@
                     userLat = pos.coords.latitude;
                     userLng = pos.coords.longitude;
                     status.innerHTML = `✅ Konum alındı. İstasyonlar sıralandı.`;
-                    
                     map.setView([userLat, userLng], 12);
                     if (userMarker) map.removeLayer(userMarker);
                     userMarker = L.marker([userLat, userLng], {icon: redIcon}).addTo(map);
-
                     loadData();
                 },
                 (err) => {
@@ -497,11 +468,9 @@
         async function loadData() {
             const list = document.getElementById('list');
             list.innerHTML = '<div style="text-align:center; padding: 20px;">Veriler yükleniyor...</div>';
-
             const { data, error } = await _supabase.from('gas_stations').select('*');
 
             if (error) {
-                console.error('Supabase veri çekme hatası:', error);
                 list.innerHTML = '<div class="card">Veriler yüklenirken bir hata oluştu.</div>';
                 return;
             }
@@ -515,12 +484,8 @@
             const R = 6371; 
             const dLat = (lat2 - lat1) * Math.PI / 180;
             const dLon = (lon2 - lon1) * Math.PI / 180;
-            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-                      Math.sin(dLon/2) * Math.sin(dLon/2);
-            let straightDist = R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
-            
-            return straightDist * 1.25;
+            const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2)**2;
+            return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))) * 1.25;
         }
 
         function setSort(sortType, btnElement) {
@@ -531,11 +496,7 @@
         }
 
         function focusStationOnMap(lat, lng, markerIndex) {
-            if (!lat || !lng || lat === 0 || lng === 0) {
-                alert("Bu istasyon için geçerli bir konum koordinatı bulunmuyor.");
-                return;
-            }
-
+            if (!lat || !lng || lat === 0 || lng === 0) return;
             map.setView([lat, lng], 16, { animate: true, duration: 1.0 });
             if (stationMarkers[markerIndex]) stationMarkers[markerIndex].openPopup();
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -616,18 +577,9 @@
                         </div>
                         <div class="station-address">📍 ${st.address || ''}</div>
                         <div class="prices">
-                            <div class="price-item">
-                                <div class="price-label">Benzin</div>
-                                <div class="price-val">${benzinVal}</div>
-                            </div>
-                            <div class="price-item">
-                                <div class="price-label">Motorin</div>
-                                <div class="price-val">${motorinVal}</div>
-                            </div>
-                            <div class="price-item">
-                                <div class="price-label">LPG</div>
-                                <div class="price-val">${lpgVal}</div>
-                            </div>
+                            <div class="price-item"><div class="price-label">Benzin</div><div class="price-val">${benzinVal}</div></div>
+                            <div class="price-item"><div class="price-label">Motorin</div><div class="price-val">${motorinVal}</div></div>
+                            <div class="price-item"><div class="price-label">LPG</div><div class="price-val">${lpgVal}</div></div>
                         </div>
                         <button class="report-btn" onclick="event.stopPropagation(); openReportModal('${st.id || ''}', '${brandName}', '${st.benzin_price || '-'}', '${st.motorin_price || '-'}', '${st.lpg_price || '-'}')">
                             📝 Fiyat / Bilgi Bildir
