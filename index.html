@@ -24,6 +24,14 @@
           serviceWorkerPath: "OneSignalSDKWorker.js",
           serviceWorkerParam: { scope: "/afyonakaryakit03/" },
           allowLocalhostAsSecureOrigin: true,
+          promptOptions: {
+            slidedown: {
+              enabled: true,
+              actionMessage: "Anlık akaryakıt fiyat değişimleri ve indirim/zam haberlerinden haberdar olun!",
+              acceptButtonText: "Abone Ol",
+              cancelButtonText: "İptal"
+            }
+          }
         });
       });
     </script>
@@ -301,14 +309,14 @@
             initApp();
         };
 
-        // OneSignal Mobil & PWA Uyumlu Abone Ol Tetikleyicisi
+        // OneSignal Bildirim İzni İsteme Fonksiyonu
         function subscribeOneSignal() {
             window.OneSignalDeferred = window.OneSignalDeferred || [];
             window.OneSignalDeferred.push(async function(OneSignal) {
                 try {
-                    await OneSignal.Slidedown.promptPush();
+                    await OneSignal.Slidedown.promptPush({ force: true });
                 } catch (e) {
-                    console.error("Slidedown hatası, native prompt deneniyor:", e);
+                    console.error("Bildirim tetikleme hatası:", e);
                     await OneSignal.Notifications.requestPermission();
                 }
             });
