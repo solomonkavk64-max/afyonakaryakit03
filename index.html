@@ -303,22 +303,32 @@
             initApp();
         };
 
-                // OneSignal Manuel Abone Ol Fonksiyonu (Native Prompt)
+                        // OneSignal Mobil / PWA Uyumlu Abone Ol Fonksiyonu
         function subscribeOneSignal() {
             window.OneSignalDeferred = window.OneSignalDeferred || [];
             window.OneSignalDeferred.push(async function(OneSignal) {
                 try {
-                    // Doğrudan tarayıcının yerel bildirim izin penceresini açar
-                    const permission = await OneSignal.Notifications.requestPermission();
-                    if (permission) {
-                        console.log("Bildirim izni verildi!");
-                        alert("Bildirim aboneliği başarıyla aktif edildi!");
-                    } else {
-                        alert("Bildirim izni reddedildi. Tarayıcı ayarlarından izin vermelisiniz.");
+                    // Önce mevcut izin durumunu kontrol edelim
+                    const currentPermission = OneSignal.Notifications.permission;
+                    
+                    if (currentPermission === false) {
+                        alert("Bildirim izni daha önce engellenmiş. Lütfen tarayıcı/site ayarlarından bildirim iznini 'İzin Ver' olarak değiştirin.");
+                        return;
                     }
+
+                    // Push aboneliğini aktif et ve izin iste
+                    await OneSignal.User.PushSubscription.optIn();
+                    await OneSignal.Notifications.requestPermission();
+                    
+                    alert("İşlem gönderildi! Lütfen ekrana izin penceresi gelirse 'İzin Ver'e basın.");
                 } catch (e) {
-                    console.error("Bildirim abonelik hatası:", e);
-                    alert("Abonelik başlatılırken bir hata oluştu.");
+                    console.error("Bildirim hatası:", e);
+                    // Alternatif slidedown çağrısı
+                    try {
+                        await OneSignal.Slidedown.promptPush();
+                    } catch (err) {
+                        alert("Bildirim penceresi açılamadı. Lütfen tarayıcı ayarlarınızı kontrol edin.");
+                    }
                 }
             });
         }
