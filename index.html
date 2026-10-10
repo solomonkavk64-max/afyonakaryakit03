@@ -14,38 +14,39 @@
     <!-- Supabase JS Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-        <!-- OneSignal Web Push SDK v16 -->
+            <!-- OneSignal Web Push SDK v16 -->
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
     <script>
       window.OneSignalDeferred = window.OneSignalDeferred || [];
       window.OneSignalDeferred.push(async function(OneSignal) {
-        await OneSignal.init({
-          appId: "cdd62720-5e48-4f25-b3f2-4b0e3977bf23",
-          serviceWorkerPath: "OneSignalSDKWorker.js",
-          serviceWorkerParam: { scope: "/afyonakaryakit03/" },
-          allowLocalhostAsSecureOrigin: true
-        });
+        try {
+          await OneSignal.init({
+            appId: "cdd62720-5e48-4f25-b3f2-4b0e3977bf23",
+            serviceWorkerPath: "OneSignalSDKWorker.js",
+            serviceWorkerParam: { scope: "/afyonakaryakit03/" },
+            allowLocalhostAsSecureOrigin: true
+          });
+          console.log("OneSignal başarıyla başlatıldı.");
+        } catch (e) {
+          console.error("OneSignal başlatma hatası:", e);
+        }
       });
 
-      // Butona tıklandığında kesin olarak çalışacak fonksiyon
-      function subscribeOneSignal() {
-          if (window.OneSignalDeferred) {
-              window.OneSignalDeferred.push(async function(OneSignal) {
-                  try {
-                      // OneSignal'in resmi ve en kararlı izin/abonelik penceresini açar
-                      await OneSignal.Slidedown.promptPush();
-                  } catch (error) {
-                      console.error("Bildirim penceresi hatası:", error);
-                      // Fallback olarak doğrudan tarayıcı izni isteyelif
-                      Notification.requestPermission().then(permission => {
-                          if (permission === "granted") {
-                              alert("Bildirim izni verildi! Artık duyuruları alacaksınız.");
-                          } else {
-                              alert("Bildirim izni reddedildi. Lütfen tarayıcı ayarlarından izin verin.");
-                          }
-                      });
+      // Butona basıldığında doğrudan OneSignal kullanıcı iznini tetikleyen kesin çözüm fonksiyonu
+      async function subscribeOneSignal() {
+          if (window.OneSignal) {
+              try {
+                  // Kullanıcıdan doğrudan tarayıcı push bildirim izni ister ve aboneyi OneSignal'e kaydeder
+                  const permission = await OneSignal.Notifications.requestPermission();
+                  if (permission) {
+                      alert("✅ Bildirim izni başarıyla verildi! Artık abonesiniz.");
+                  } else {
+                      alert("⚠ Bildirim izni reddedildi.");
                   }
-              });
+              } catch (err) {
+                  console.error("Abonelik hatası:", err);
+                  alert("İzin istenirken hata oluştu: " + err.message);
+              }
           } else {
               alert("OneSignal henüz yüklenmedi. Lütfen sayfayı yenileyip tekrar deneyin.");
           }
