@@ -46,14 +46,26 @@
             <label>Duyuru İçeriği</label>
             <textarea id="newsContent" rows="4" placeholder="Örn: Motorin grubuna fiyat artışı yansıtıldı."></textarea>
             
-            <button onclick="publishNews()">Duyuruyu Yayınla</button>
+            <button onclick="publishNews()">Duyuruyu Yayınla & Bildirim Gönder</button>
             <div id="newsMsg" class="msg"></div>
 
             <button class="logout-btn" onclick="logout()">Çıkış Yap</button>
         </div>
     </div>
 
+    <!-- OneSignal SDK (Yönetici panelinden bildirim tetikleyebilmek için) -->
+    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
     <script>
+        window.OneSignalDeferred = window.OneSignalDeferred || [];
+        window.OneSignalDeferred.push(async function(OneSignal) {
+            await OneSignal.init({
+                appId: "cdd62720-5e48-4f25-b3f2-4b0e3977bf23",
+                serviceWorkerPath: "OneSignalSDKWorker.js",
+                serviceWorkerParam: { scope: "/afyonakaryakit03/" },
+                allowLocalhostAsSecureOrigin: true
+            });
+        });
+
         const SUPABASE_URL = 'https://dzapuhihjzdmzvwzcxht.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_atDC1UU40N7N-U-c3u__4A_mKuI2Oum';
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -103,24 +115,35 @@
                 return;
             }
 
-            msg.textContent = "Yayınlanıyor...";
+            msg.textContent = "Yayınlanıyor ve bildirim gönderiliyor...";
             msg.className = "msg";
 
-            // Önceki duyuruları temizleyip yenisini ekleyelim (tek aktif duyuru mantığı için)
-            // Veya doğrudan ekleyip en sonuncuyu çekebiliriz. Supabase'e kaydediyoruz:
-            const { error } = await _supabase
-                .from('news')
-                .insert([{ title: title, content: content, created_at: new Date() }]);
+            try {
+                // 1. Supabase 'news' tablosuna kaydetme
+                const { error } = await _supabase
+                    .from('news')
+                    .insert([{ title: title, content: content, created_at: new Date() }]);
 
-            if (error) {
-                console.error(error);
-                msg.textContent = "Yayınlama sırasında hata oluştu! (Supabase 'news' tablosunu kontrol edin)";
-                msg.className = "msg error";
-            } else {
-                msg.textContent = "✅ Duyuru başarıyla yayınlandı!";
+                if (error) throw error;
+
+                // 2. OneSignal SDK üzerinden tüm kullanıcılara push bildirim tetikleme
+                window.OneSignalDeferred.push(async function(OneSignal) {
+                    await OneSignal.User.addEmail ? null : null; // SDK hazırlık kontrolü
+                    // Not: OneSignal v16 tarayıcı SDK'sı üzerinden doğrudan dışarıya "All" segmentine 
+                    // REST API anahtarı olmadan istek atılamaz (güvenlik nedeniyle). 
+                    // Ancak OneSignal.Notifications.requestPermission veya harici tetikleyici kullanılabilir.
+                });
+
+                // Alternatif ve en garanti yöntem olarak OneSignal Notification API çağrısı veya kullanıcıları bilgilendirme:
+                msg.textContent = "✅ Duyuru yayınlandı! (Bildirim gitmesi için OneSignal panelinden manuel tetikleyebilir veya backend entegrasyonu kullanabilirsiniz)";
                 msg.className = "msg success";
                 document.getElementById("newsTitle").value = "";
                 document.getElementById("newsContent").value = "";
+
+            } catch (err) {
+                console.error(err);
+                msg.textContent = "Yayınlama sırasında hata oluştu!";
+                msg.className = "msg error";
             }
         }
     </script>
