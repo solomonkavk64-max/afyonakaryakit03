@@ -303,14 +303,22 @@
             initApp();
         };
 
-        // OneSignal Manuel Abone Ol Fonksiyonu
+                // OneSignal Manuel Abone Ol Fonksiyonu (Native Prompt)
         function subscribeOneSignal() {
             window.OneSignalDeferred = window.OneSignalDeferred || [];
             window.OneSignalDeferred.push(async function(OneSignal) {
                 try {
-                    await OneSignal.Slidedown.promptPush();
+                    // Doğrudan tarayıcının yerel bildirim izin penceresini açar
+                    const permission = await OneSignal.Notifications.requestPermission();
+                    if (permission) {
+                        console.log("Bildirim izni verildi!");
+                        alert("Bildirim aboneliği başarıyla aktif edildi!");
+                    } else {
+                        alert("Bildirim izni reddedildi. Tarayıcı ayarlarından izin vermelisiniz.");
+                    }
                 } catch (e) {
                     console.error("Bildirim abonelik hatası:", e);
+                    alert("Abonelik başlatılırken bir hata oluştu.");
                 }
             });
         }
