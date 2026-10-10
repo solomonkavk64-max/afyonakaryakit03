@@ -1,4 +1,5 @@
 {
+  "id": "/afyonakaryakit03/?source=pwa",
   "name": "Afyon Akaryakıt Fiyatları",
   "short_name": "Akaryakıt",
   "description": "Afyonkarahisar akaryakıt ve en yakın istasyon fiyatları uygulaması",
@@ -8,6 +9,7 @@
   "orientation": "portrait",
   "background_color": "#ffffff",
   "theme_color": "#d9534f",
+  "categories": ["utilities", "navigation", "lifestyle"],
   "icons": [
     {
       "src": "https://cdn-icons-png.flaticon.com/512/2983/2983788.png",
