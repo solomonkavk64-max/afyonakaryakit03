@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Afyonkarahisar Akaryakıt Fiyatları ve Takip</title>
+    
+    <!-- PWABuilder ve Play Store İçin Manifest Bağlantısı Eklendi -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#d9534f">
+
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <!-- Supabase JS Client -->
@@ -120,7 +125,7 @@
         <div class="splash-content">
             <div class="splash-logo">⛽</div>
             <h1>Afyon Akaryakıt</h1>
-            <p>Fiyatlar ve İstasyon Takip Sistemi</p>
+            <p>Fiyatlar dan İstasyon Takip Sistemi</p>
         </div>
     </div>
 
@@ -305,7 +310,6 @@
         function closeModal() { document.getElementById('legalModal').classList.remove('open'); }
         function handleOutsideClick(event) { if (event.target.id === 'legalModal') closeModal(); }
 
-        // BİLDİRİM MODAL FONKSİYONLARI
         function openReportModal(stationId, stationName, benzin, motorin, lpg) {
             document.getElementById('reportStationId').value = stationId;
             document.getElementById('reportStationName').textContent = stationName;
@@ -340,7 +344,7 @@
             if (!benzin && !motorin && !lpg && !note && (!photoInput.files || photoInput.files.length === 0)) {
                 alert("Lütfen en az bir fiyat, açıklama veya tabela fotoğrafı ekleyiniz.");
                 return;
-            }
+           }
 
             if (!legalConsent.checked) {
                 alert("Devam edebilmek için lütfen yasal bildirim ve onay kutusunu işaretleyiniz.");
@@ -371,12 +375,9 @@
                         .upload(fileName, file);
 
                     if (uploadError) throw uploadError;
-
-                    // Fotoğraf yolunu kaydediyoruz
                     photoUrl = fileName;
                 }
 
-                // is_approved varsayılan olarak false kaydedilir (Siz onaylayana kadar görünmez)
                 const { error } = await _supabase
                     .from('price_reports')
                     .insert([
