@@ -269,6 +269,13 @@
                 if (splash) splash.classList.add('fade-out');
             }, 1300);
 
+            // Service Worker Kaydı (Arka Plan Yetenekleri İçin)
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('Service Worker kayıt edildi:', reg))
+                    .catch(err => console.log('Service Worker hatası:', err));
+            }
+
             loadNews();
             initApp();
             setupRealtimeNews(); // Canlı veritabanı dinleyicisi aktif
