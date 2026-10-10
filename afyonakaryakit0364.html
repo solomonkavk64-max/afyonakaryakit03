@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Akaryakıt Yönetim Paneli</title>
-    <!-- Supabase JS Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * { box-sizing: border-box; }
@@ -14,21 +13,17 @@
         h2 { margin-top: 0; font-size: 20px; color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; }
         label { display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px; color: #475569; }
         input, textarea { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; margin-bottom: 14px; outline: none; font-family: inherit; }
-        input:focus, textarea:focus { border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,0.2); }
-        button { width: 100%; background: #2563eb; color: white; padding: 14px; border: none; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+        button { width: 100%; background: #2563eb; color: white; padding: 14px; border: none; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; }
         button:hover { background: #1d4ed8; }
-        .logout-btn { background: #dc2626; margin-top: 10px; }
-        .logout-btn:hover { background: #b91c12; }
-        #loginScreen, #adminPanel { display: none; }
         .msg { font-size: 13px; font-weight: bold; text-align: center; margin-top: 10px; }
         .success { color: #16a34a; }
         .error { color: #dc2626; }
+        #loginScreen, #adminPanel { display: none; }
     </style>
 </head>
 <body>
 
     <div class="max-w">
-        <!-- GİRİŞ EKRANI -->
         <div id="loginScreen" class="card">
             <h2>🔐 Yönetici Girişi</h2>
             <label>Yönetici Şifresi</label>
@@ -37,7 +32,6 @@
             <div id="loginMsg" class="msg"></div>
         </div>
 
-        <!-- YÖNETİM PANELİ -->
         <div id="adminPanel" class="card">
             <h2>📢 Son Dakika Duyuru / Zam Ekle</h2>
             <label>Duyuru Başlığı</label>
@@ -46,10 +40,8 @@
             <label>Duyuru İçeriği</label>
             <textarea id="newsContent" rows="4" placeholder="Örn: Motorin grubuna fiyat artışı yansıtıldı."></textarea>
             
-            <button onclick="publishNews()">🚀 Duyuruyu Yayınla & Bildirim Gönder</button>
+            <button onclick="publishNews()">🚀 Duyuruyu Yayınla & Bildir</button>
             <div id="newsMsg" class="msg"></div>
-
-            <button class="logout-btn" onclick="logout()">Çıkış Yap</button>
         </div>
     </div>
 
@@ -57,16 +49,10 @@
         const SUPABASE_URL = 'https://dzapuhihjzdmzvwzcxht.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_atDC1UU40N7N-U-c3u__4A_mKuI2Oum';
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
         const ADMIN_PASSWORD = "Afyon0364.,";
 
-        // ONESIGNAL BİLGİLERİ
-        const ONESIGNAL_APP_ID = "cdd62720-5e48-4f25-b3f2-4b0e3977bf23";
-        const ONESIGNAL_REST_API_KEY = "os_v2_app_zxlcoic6jbhslm7sjmhds557ensqzaeo6vhea2vkp4monag5exk4b6urvyf42mulx4zxf32fez3dkuszyvem25sjf6ivsbnrqxbu4oa";
-
         window.onload = function() {
-            const isAuth = sessionStorage.getItem("isAdminAuth");
-            if (isAuth === "true") {
+            if (sessionStorage.getItem("isAdminAuth") === "true") {
                 showPanel();
             } else {
                 document.getElementById("loginScreen").style.display = "block";
@@ -74,13 +60,11 @@
         };
 
         function checkLogin() {
-            const pass = document.getElementById("adminPass").value;
-            const msg = document.getElementById("loginMsg");
-
-            if (pass === ADMIN_PASSWORD) {
+            if (document.getElementById("adminPass").value === ADMIN_PASSWORD) {
                 sessionStorage.setItem("isAdminAuth", "true");
                 showPanel();
             } else {
+                const msg = document.getElementById("loginMsg");
                 msg.textContent = "Hatalı şifre!";
                 msg.className = "msg error";
             }
@@ -89,11 +73,6 @@
         function showPanel() {
             document.getElementById("loginScreen").style.display = "none";
             document.getElementById("adminPanel").style.display = "block";
-        }
-
-        function logout() {
-            sessionStorage.removeItem("isAdminAuth");
-            location.reload();
         }
 
         async function publishNews() {
@@ -107,44 +86,22 @@
                 return;
             }
 
-            msg.textContent = "Yayınlanıyor ve bildirim atılıyor...";
+            msg.textContent = "Yayınlanıyor...";
             msg.className = "msg";
 
             try {
-                // 1. Supabase 'news' tablosuna duyuruyu kaydedelim
                 const { error } = await _supabase
                     .from('news')
                     .insert([{ title: title, content: content, created_at: new Date() }]);
 
                 if (error) throw error;
 
-                // 2. OneSignal REST API ile anlık otomatik bildirim gönderelim
-                const response = await fetch("https://onesignal.com/api/v1/notifications", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json; charset=utf-8",
-                        "Authorization": "Basic " + ONESIGNAL_REST_API_KEY
-                    },
-                    body: JSON.stringify({
-                        app_id: ONESIGNAL_APP_ID,
-                        included_segments: ["All"],
-                        headings: { "tr": title, "en": title },
-                        contents: { "tr": content, "en": content },
-                        url: "https://solomonkavk64-max.github.io/afyonakaryakit03/"
-                    })
-                });
-
-                const resData = await response.json();
-                console.log("OneSignal Yanıtı:", resData);
-
-                msg.textContent = "✅ Duyuru yayınlandı ve bildirim başarıyla tüm abonelere gönderildi!";
+                msg.textContent = "✅ Duyuru başarıyla yayınlandı ve açık olan cihazlara bildirildi!";
                 msg.className = "msg success";
                 document.getElementById("newsTitle").value = "";
                 document.getElementById("newsContent").value = "";
-
             } catch (err) {
-                console.error("Hata:", err);
-                msg.textContent = "İşlem sırasında hata oluştu: " + err.message;
+                msg.textContent = "Hata oluştu: " + err.message;
                 msg.className = "msg error";
             }
         }
