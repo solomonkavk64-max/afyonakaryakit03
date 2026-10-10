@@ -274,18 +274,20 @@
             setupRealtimeNews(); // Canlı veritabanı dinleyicisi aktif
         };
 
-        // Tarayıcı Sesli Bildirim İzni İsteme Fonksiyonu
+                // Tarayıcı bildirim desteği olmasa bile sesli ve görsel uyarı veren kesin çözüm
         function requestNotificationPermission() {
+            playNotificationSound();
+            
             if (!("Notification" in window)) {
-                alert("Tarayıcınız bildirim özelliğini desteklemiyor.");
+                alert("✅ Sesli uyarı sistemi aktif! Yeni duyurular eklendiğinde ses çalacak ve ekranda belirecektir.");
                 return;
             }
+
             Notification.requestPermission().then(permission => {
                 if (permission === "granted") {
-                    alert("✅ Bildirim izni başarıyla verildi! Yeni duyurularda sesli uyarı alacaksınız.");
-                    playNotificationSound();
+                    alert("✅ Bildirim izni başarıyla verildi!");
                 } else {
-                    alert("⚠ Bildirim izni reddedildi.");
+                    alert("✅ Sesli uyarılar aktif edildi! Bildirim izni verilmese de sesli uyarı alacaksınız.");
                 }
             });
         }
