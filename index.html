@@ -139,7 +139,7 @@
     <div id="map"></div>
 
     <div class="container">
-        <!-- YEREL BİLDİRİM İZNİ BUTONU -->
+        <!-- SESLİ BİLDİRİM İZNİ BUTONU -->
         <div style="margin-bottom: 12px;">
             <button class="btn" style="background: #dc2626;" onclick="requestNotificationPermission()">🔔 Sesli Bildirimleri Aktif Et</button>
         </div>
@@ -274,55 +274,71 @@
             setupRealtimeNews(); // Canlı veritabanı dinleyicisi aktif
         };
 
-                // Tarayıcı bildirim desteği olmasa bile sesli ve görsel uyarı veren kesin çözüm
+        // Tarayıcı Sesli ve Görsel Bildirim İzni İsteme Fonksiyonu
         function requestNotificationPermission() {
-            playNotificationSound();
-            
+            playNotificationSound(); // Kullanıcı etkileşiminde audio context'i kilidini açar
+
             if (!("Notification" in window)) {
-                alert("✅ Sesli uyarı sistemi aktif! Yeni duyurular eklendiğinde ses çalacak ve ekranda belirecektir.");
+                alert("✅ Sesli uyarı sistemi aktif! Yeni duyurularda ses çalacaktır.");
                 return;
             }
 
             Notification.requestPermission().then(permission => {
                 if (permission === "granted") {
-                    alert("✅ Bildirim izni başarıyla verildi!");
+                    alert("✅ Bildirim ve sesli uyarı sistemi tamamen aktif!");
                 } else {
-                    alert("✅ Sesli uyarılar aktif edildi! Bildirim izni verilmese de sesli uyarı alacaksınız.");
+                    alert("✅ Sesli uyarılar aktif edildi!");
                 }
             });
         }
 
-        // Web Audio API ile Ses Çalma
+        // Web Audio API ile Net Son Dakika Uyarısı Sesi
         function playNotificationSound() {
             try {
                 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
                 const osc = audioCtx.createOscillator();
                 const gain = audioCtx.createGain();
                 osc.type = 'sine';
-                osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5 Notası
-                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                osc.frequency.setValueAtTime(880, audioCtx.currentTime); // A5 nota (Daha net uyarı sesi)
+                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
                 osc.connect(gain);
                 gain.connect(audioCtx.destination);
                 osc.start();
-                osc.stop(audioCtx.currentTime + 0.3);
+                osc.stop(audioCtx.currentTime + 0.35);
             } catch (e) {
                 console.log("Ses çalınamadı:", e);
             }
         }
 
-        // Supabase Realtime ile Canlı Duyuru Dinleme
+        // Supabase Realtime ile Canlı Son Dakika Duyuru Dinleme
         function setupRealtimeNews() {
             _supabase
                 .channel('public:news')
                 .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'news' }, payload => {
                     const newNews = payload.new;
+                    console.log("Son dakika haberi geldi:", newNews);
+                    
+                    // Banner'ı anında güncelle
                     displayNewsBanner(newNews);
 
-                    if (Notification.permission === "granted") {
-                        new Notification("📢 " + newNews.title, {
-                            body: newNews.content
-                        });
-                        playNotificationSound();
+                    // Sesli uyarıyı çal
+                    playNotificationSound();
+
+                    // Tarayıcı Bildirimini Göster
+                    if ("Notification" in window && Notification.permission === "granted") {
+                        try {
+                            new Notification("🚨 SON DAKİKA: " + newNews.title, {
+                                body: newNews.content,
+                                icon: "https://cdn-icons-png.flaticon.com/512/3014/3014237.png",
+                                tag: "breaking-news",
+                                renotify: true
+                            });
+                        } catch (err) {
+                            console.log("Bildirim oluşturulamadı:", err);
+                        }
                     }
                 })
                 .subscribe();
