@@ -239,7 +239,7 @@
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     
-    <!-- Firebase SDK'ları -->
+    <!-- Firebase SDK'ları (Compat Sürümü) -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js"></script>
 
@@ -248,7 +248,7 @@
         const SUPABASE_ANON_KEY = 'sb_publishable_atDC1UU40N7N-U-c3u__4A_mKuI2Oum';
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // Firebase Başlatma
+        // Firebase Yapılandırması
         const firebaseConfig = {
           apiKey: "AIzaSyAql3eWJREPdKPK5BLhqd9CeYgr15Uvbi4",
           authDomain: "afyon-akaryakit.firebaseapp.com",
@@ -261,39 +261,41 @@
         firebase.initializeApp(firebaseConfig);
         const messaging = firebase.messaging();
 
-        // Bildirim İzni İsteme ve FCM Token Alma
-async function requestNotificationPermission() {
-    try {
-        const permission = await Notification.requestPermission();
-        if (permission === 'granted') {
-            console.log('Bildirim izni verildi.');
-            
-            // Firebase VAPID Key ile cihaz token'ını alma
-            const token = await messaging.getToken({
-                vapidKey: 'BOmfCJOjA_hSLQwuSZJQoDU3VLEqOvKEhRiX35gJ5YvhyD7t4ZV18-j0ttdZWueHdx1RbqTF6TWD4vlFnwsiYU4'
-            });
+        // Bildirim İzni İsteme ve FCM Token Alıp Supabase'e Kaydetme
+        async function requestNotificationPermission() {
+            try {
+                const permission = await Notification.requestPermission();
+                if (permission === 'granted') {
+                    console.log('Bildirim izni verildi.');
+                    
+                    // Service Worker kaydıyla VAPID Key kullanarak token alma
+                    const token = await messaging.getToken({
+                        vapidKey: 'BOmfCJOjA_hSLQwuSZJQoDU3VLEqOvKEhRiX35gJ5YvhyD7t4ZV18-j0ttdZWueHdx1RbqTF6TWD4vlFnwsiYU4'
+                    });
 
-            if (token) {
-                console.log("Cihaz FCM Token'ı:", token);
-                // Token'ı Supabase'e kaydederek tüm cihazlara toplu bildirim atabiliriz
-                saveTokenToSupabase(token);
+                    if (token) {
+                        console.log("Cihaz FCM Token'ı:", token);
+                        await saveTokenToSupabase(token);
+                    }
+                } else {
+                    console.log('Bildirim izni verilmedi/reddedildi.');
+                }
+            } catch (error) {
+                console.error("Bildirim izni veya token alma hatası:", error);
             }
-        } else {
-            console.log('Bildirim izni reddedildi.');
         }
-    } catch (error) {
-        console.error("Bildirim izni alınırken hata:", error);
-    }
-}
 
-// Token'ı Supabase 'fcm_tokens' tablosuna kaydetme fonksiyonu
-async function saveTokenToSupabase(token) {
-    try {
-        await _supabase.from('fcm_tokens').upsert([{ token: token }], { onConflict: 'token' });
-    } catch (e) {
-        console.error("Token kaydetme hatası:", e);
-    }
-}
+        // Token'ı Supabase 'fcm_tokens' tablosuna kaydetme
+        async function saveTokenToSupabase(token) {
+            try {
+                const { error } = await _supabase.from('fcm_tokens').upsert([{ token: token }], { onConflict: 'token' });
+                if (error) console.error("Supabase token kayıt hatası:", error);
+                else console.log("Token Supabase tablosuna kaydedildi.");
+            } catch (e) {
+                console.error("Token kaydedilirken istisna oluştu:", e);
+            }
+        }
+
         let map = L.map('map').setView([38.7569, 30.5387], 11);
         L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
             maxZoom: 19,
@@ -323,8 +325,8 @@ async function saveTokenToSupabase(token) {
             loadNews();
             initApp();
             
-            // Kullanıcı uygulamaya girdiğinde bildirim izni iste
-            setTimeout(requestNotificationPermission, 3000);
+            // Uygulama açıldıktan 2 saniye sonra bildirim izni iste
+            setTimeout(requestNotificationPermission, 2000);
         };
 
         async function loadNews() {
@@ -483,7 +485,7 @@ async function saveTokenToSupabase(token) {
         function calculateDistance(lat1, lon1, lat2, lon2) {
             if (!lat2 || !lon2 || (lat2 === 0 && lon2 === 0)) return 9999;
             const R = 6371; 
-            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLat = (lat1 - lat1) * Math.PI / 180;
             const dLon = (lon2 - lon1) * Math.PI / 180;
             const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2)**2;
             const straightDistance = R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
@@ -561,7 +563,7 @@ async function saveTokenToSupabase(token) {
                                 <b>${brandName}</b><br>
                                 <span style="font-size:11px; color:#555;">${st.address || ''}</span><br>
                                 <div class="route-btn-container">
-                                    <a class="route-btn" href="${geoUrl}">🧭 Cihaz Haritasы ile Aç</a>
+                                    <a class="route-btn" href="${geoUrl}">🧭 Cihaz Haritası ile Aç</a>
                                 </div>
                             </div>
                         `);
