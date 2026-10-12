@@ -238,10 +238,48 @@
 
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Firebase SDK'ları -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js"></script>
+
     <script>
         const SUPABASE_URL = 'https://dzapuhihjzdmzvwzcxht.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_atDC1UU40N7N-U-c3u__4A_mKuI2Oum';
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // Firebase Başlatma
+        const firebaseConfig = {
+          apiKey: "AIzaSyAql3eWJREPdKPK5BLhqd9CeYgr15Uvbi4",
+          authDomain: "afyon-akaryakit.firebaseapp.com",
+          projectId: "afyon-akaryakit",
+          storageBucket: "afyon-akaryakit.firebasestorage.app",
+          messagingSenderId: "19128335580",
+          appId: "1:19128335580:web:26da6ae3a97e10b11e4819",
+          measurementId: "G-3V2PHB2JL2"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const messaging = firebase.messaging();
+
+        // Bildirim İzni İsteme ve Token Kaydetme
+        async function requestNotificationPermission() {
+            try {
+                const permission = await Notification.requestPermission();
+                if (permission === 'granted') {
+                    console.log('Bildirim izni verildi.');
+                    // Vapid key gerektirmeyen temel token alma (veya public vapid key ile)
+                    const token = await messaging.getToken();
+                    if (token) {
+                        console.log("FCM Token:", token);
+                        // İleride token'ları Supabase'e kaydetmek için burayı kullanabiliriz
+                    }
+                } else {
+                    console.log('Bildirim izni reddedildi.');
+                }
+            } catch (error) {
+                console.error("Bildirim izni alınırken hata:", error);
+            }
+        }
 
         let map = L.map('map').setView([38.7569, 30.5387], 11);
         L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
@@ -271,6 +309,9 @@
 
             loadNews();
             initApp();
+            
+            // Kullanıcı uygulamaya girdiğinde bildirim izni iste
+            setTimeout(requestNotificationPermission, 3000);
         };
 
         async function loadNews() {
@@ -507,7 +548,7 @@
                                 <b>${brandName}</b><br>
                                 <span style="font-size:11px; color:#555;">${st.address || ''}</span><br>
                                 <div class="route-btn-container">
-                                    <a class="route-btn" href="${geoUrl}">🧭 Cihaz Haritası ile Aç</a>
+                                    <a class="route-btn" href="${geoUrl}">🧭 Cihaz Haritasы ile Aç</a>
                                 </div>
                             </div>
                         `);
