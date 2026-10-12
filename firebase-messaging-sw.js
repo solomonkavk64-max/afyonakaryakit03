@@ -1,4 +1,3 @@
-// Firebase Arka Plan Bildirim Dinleyicisi
 importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js');
 
@@ -14,16 +13,12 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// Arka planda bildirim geldiğinde çalışacak tetikleyici
 messaging.onBackgroundMessage((payload) => {
-  console.log('[firebase-messaging-sw.js] Arka plan mesajı alındı: ', payload);
-  
-  const notificationTitle = payload.notification.title || "Afyon Akaryakıt";
+  console.log('[firebase-messaging-sw.js] Arka planda mesaj alındı: ', payload);
+  const notificationTitle = payload.notification.title;
   const notificationOptions = {
-    body: payload.notification.body || "Yeni duyuru var.",
-    icon: '/manifest.json', // veya logo ikonunuz
-    badge: '/manifest.json',
-    vibrate: [200, 100, 200, 100, 200]
+    body: payload.notification.body,
+    icon: '/icon.png'
   };
 
   self.registration.showNotification(notificationTitle, notificationOptions);
