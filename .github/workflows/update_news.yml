@@ -1,29 +1,31 @@
-name: Akaryakıt Haberlerini Otomatik Güncelle
+name: Fetch Fuel News Automatically
 
 on:
-  schedule:
-    - cron: '0 */6 * * *'
   workflow_dispatch:
+  schedule:
+    # Her saat başı otomatik çalışır
+    - cron: '0 * * * *'
 
 jobs:
-  update-news:
+  build:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Kodları Kopyala
+      - name: Repodaki Kodları Çek
         uses: actions/checkout@v3
 
-      - name: Python Kurulumu
-        uses: actions/setup-python@v4
+      - name: Python Ortamını Kur
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.x'
 
       - name: Gerekli Kütüphaneleri Yükle
         run: |
-          pip install feedparser supabase requests
+          python -m pip install --upgrade pip
+          pip install feedparser supabase
 
-      - name: Scripti Çalıştır
+      - name: News Scriptini Çalıştır
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-        run: |
-          python fetch_fuel_news.py
+        run: python fetch_fuel_news.py
