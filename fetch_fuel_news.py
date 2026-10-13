@@ -1,41 +1,58 @@
-import feedparser
 import os
-from supabase import create_client, Client
+import feedparser
+from supabase import create_client
 
+# GitHub Secrets üzerinden Supabase bağlantı bilgileri
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
 
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-RSS_URLS = [
-    "https://www.haberturk.com/rss/ekonomi.xml",
+# Takip edilen RSS kaynakları (Ekonomi / Gündem)
+rss_urls = [
+    "https://www.haberturk.com/rss/kategori/ekonomi.xml",
     "https://www.ntv.com.tr/ekonomi.rss"
 ]
 
-keywords = ["akaryakıt", "benzin", "motorin", "lpg", "zam", "indirim", "fiyat", "ekonomi", "petrol", "dolar"]
+def fetch_fresh_news():
+    news_list = []
+    seen_titles = set()
+    
+    for url in rss_urls:
+        feed = feedparser.parse(url)
+        # Her kaynaktan en taze ilk 8 haberi alıyoruz
+        for entry in feed.entries[:8]:
+            title = entry.get('title', '').strip()
+            summary = entry.get('summary', entry.get('description', '')).strip()
+            link = entry.get('link', '').strip()
+            
+            if title and link and title not in seen_titles:
+                seen_titles.add(title)
+                news_list.append({
+                    "title": title,
+                    "content": summary,
+                    "url": link
+                })
+                
+    return news_list
 
-added_count = 0
+def update_news_table():
+    print("🧹 Eski haberler temizleniyor...")
+    try:
+        # Tablodaki tüm eski haberleri siliyoruz, liste sadece en güncel taze haberlerle dolacak
+        supabase.table('news').delete().neq('id', 0).execute()
+    except Exception as e:
+        print(f"Eski haberler silinirken hata oluştu: {e}")
 
-for rss_url in RSS_URLS:
-    print(f"\n--- RSS Adresinden veriler çekiliyor: {rss_url} ---")
-    feed = feedparser.parse(rss_url)
-    print(f"Toplam bulunan haber sayısı: {len(feed.entries)}")
+    print("📥 Güncel haberler çekiliyor...")
+    fresh_news = fetch_fresh_news()
 
-    for entry in feed.entries[:20]:
-        title = entry.title
-        link = entry.link
-        
-        # Kelime eşleşmesi kontrolü
-        matched = any(kw in title.lower() for kw in keywords)
-        
-        if matched:
-            print(f"-> Eşleşme bulundu! Ekleniyor: {title}")
-            try:
-                # Artık hem title hem url sütununa veri gönderiyoruz
-                data = {"title": title, "url": link}
-                supabase.table("news").insert(data).execute()
-                added_count += 1
-            except Exception as e:
-                print(f"Kayıt Notu: {e}")
+    if fresh_news:
+        print(f"✨ Supabase'e eklenen toplam güncel haber sayısı: {len(fresh_news)}")
+        response = supabase.table('news').insert(fresh_news).execute()
+        print("İşlem başarıyla tamamlandı!")
+    else:
+        print("Eklenecek yeni haber bulunamadı.")
 
-print(f"\nİşlem tamamlandı. Eklenen toplam yeni haber sayısı: {added_count}")
+if __name__ == "__main__":
+    update_news_table()
