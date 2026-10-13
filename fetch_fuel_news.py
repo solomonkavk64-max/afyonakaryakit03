@@ -7,22 +7,23 @@ SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# Daha zengin haber kaynağı
 rss_urls = [
     "https://www.haberturk.com/rss/kategori/ekonomi.xml",
     "https://www.ntv.com.tr/ekonomi.rss",
     "https://www.cnnturk.com/feed/rss/ekonomi/news"
 ]
 
-KEYWORDS = [
+# Sadece doğrudan akaryakıt, petrol ve yakıt türleri (Genel ekonomi kelimeleri tamamen silindi)
+PURE_FUEL_KEYWORDS = [
     'benzin', 'motorin', 'lpg', 'otogaz', 'akaryakıt', 
     'petrol', 'brent', 'mazot', 'motorine', 'benzine', 'akaryakıta',
-    'epdk', 'opec', 'enerji', 'zam', 'indirim', 'fiyat'
+    'tüpraş', 'opet', 'shell', 'poş', 'bp', 'opec'
 ]
 
-def is_fuel_related(title, summary):
+def is_pure_fuel_news(title, summary):
     text = f"{title} {summary}".lower()
-    return any(word in text for word in KEYWORDS)
+    # Haberin içinde mutlaka bu saf akaryakıt kelimelerinden en az biri geçmek zorunda
+    return any(word in text for word in PURE_FUEL_KEYWORDS)
 
 def fetch_fresh_news():
     news_list = []
@@ -36,7 +37,7 @@ def fetch_fresh_news():
             link = entry.get('link', '').strip()
             
             if title and link and title not in seen_titles:
-                if is_fuel_related(title, summary):
+                if is_pure_fuel_news(title, summary):
                     seen_titles.add(title)
                     news_list.append({
                         "title": title,
@@ -47,21 +48,21 @@ def fetch_fresh_news():
     return news_list
 
 def update_news_table():
-    print("🧹 Eski haberler temizleniyor...")
+    print("🧹 Eski ve alakasız haberler temizleniyor...")
     try:
         supabase.table('news').delete().neq('id', 0).execute()
     except Exception as e:
-        print(f"Eski haberler silinirken hata oluştu: {e}")
+        print(f"Eski haberler silinirken hata: {e}")
 
-    print("🔍 Güncel haberler taranıyor...")
+    print("🔍 Sadece saf akaryakıt ve petrol haberleri taranıyor...")
     fresh_news = fetch_fresh_news()
 
     if fresh_news:
-        print(f"✨ Eklenen toplam haber sayısı: {len(fresh_news)}")
+        print(f"✨ Filtrelenen saf akaryakıt haberi sayısı: {len(fresh_news)}")
         supabase.table('news').insert(fresh_news).execute()
         print("İşlem başarıyla tamamlandı!")
     else:
-        print("Kriterlere uyan yeni haber bulunamadı.")
+        print("Kriterlere uyan yeni akaryakıt haberi bulunamadı.")
 
 if __name__ == "__main__":
     update_news_table()
