@@ -401,15 +401,16 @@
             const container = document.getElementById("allNewsContainer");
             container.innerHTML = "";
 
-            newsList.forEach(item => {
+            if (!newsList || newsList.length === 0) {
+                container.innerHTML = '<div style="text-align:center; padding:20px; color:#64748b;">Güncel akaryakıt haberi bulunamadı.</div>';
+                return;
+            }
+
+            newsList.forEach((item, index) => {
                 const dateStr = item.created_at ? new Date(item.created_at).toLocaleDateString('tr-TR') + " " + new Date(item.created_at).toLocaleTimeString('tr-TR', {hour: '2-digit', minute:'2-digit'}) : "";
                 
-                const encodedTitle = encodeURIComponent(item.title || '');
-                const encodedContent = encodeURIComponent(item.content || '');
-                const encodedUrl = encodeURIComponent(item.url || '');
-                
                 container.innerHTML += `
-                    <div class="news-item-card" onclick="openNewsDetail('${encodedTitle}', '${encodedContent}', '${dateStr}', '${encodedUrl}')">
+                    <div class="news-item-card" onclick="openNewsDetailByIndex(${index})">
                         <div class="news-item-title">📰 ${item.title}</div>
                         <div style="font-size: 12px; color: #475569; margin-bottom: 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${item.content || ''}</div>
                         <div class="news-item-date">⏱ ${dateStr}</div>
@@ -418,19 +419,20 @@
             });
         }
 
-        // Haber detayını uygulama içinde açan fonksiyon
-        function openNewsDetail(titleEncoded, contentEncoded, dateStr, urlEncoded) {
-            const title = decodeURIComponent(titleEncoded);
-            const content = decodeURIComponent(contentEncoded);
-            const url = decodeURIComponent(urlEncoded);
+        // Tıklanan haberi indis numarası üzerinden güvenle açan fonksiyon
+        function openNewsDetailByIndex(index) {
+            const news = fetchedNewsList[index];
+            if (!news) return;
 
-            document.getElementById('detailModalTitle').textContent = title;
+            const dateStr = news.created_at ? new Date(news.created_at).toLocaleDateString('tr-TR') + " " + new Date(news.created_at).toLocaleTimeString('tr-TR', {hour: '2-digit', minute:'2-digit'}) : "";
+
+            document.getElementById('detailModalTitle').textContent = news.title;
             document.getElementById('detailModalDate').textContent = "⏱ Yayınlanma: " + dateStr;
-            document.getElementById('detailModalContent').textContent = content || "Haber içeriği bulunmuyor.";
+            document.getElementById('detailModalContent').textContent = news.content || "Haber içeriği bulunmuyor.";
             
             const linkBtn = document.getElementById('detailModalLink');
-            if (url) {
-                linkBtn.href = url;
+            if (news.url) {
+                linkBtn.href = news.url;
                 linkBtn.style.display = "block";
             } else {
                 linkBtn.style.display = "none";
