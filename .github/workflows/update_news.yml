@@ -3,7 +3,6 @@ name: Fetch Fuel News Automatically
 on:
   workflow_dispatch:
   schedule:
-    # Her saat başı otomatik çalışır
     - cron: '0 * * * *'
 
 jobs:
