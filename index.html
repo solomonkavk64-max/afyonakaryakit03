@@ -108,6 +108,20 @@
         .modal-body { font-size: 13px; color: #334155; line-height: 1.6; max-height: 65vh; overflow-y: auto; }
         .modal-body h4 { color: #0f172a; margin-top: 12px; margin-bottom: 4px; font-size: 13px; }
         
+        .news-item-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-left: 4px solid #2563eb;
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .news-item-card:hover { background: #eff6ff; }
+        .news-item-title { font-weight: bold; color: #0f172a; font-size: 14px; margin-bottom: 4px; }
+        .news-item-date { font-size: 11px; color: #64748b; }
+
         .legal-consent-box {
             background: #f8fafc;
             border: 1px solid #e2e8f0;
@@ -143,11 +157,11 @@
 
     <div class="container">
         <!-- DUYURU BANDI -->
-        <div id="newsBanner">
+        <div id="newsBanner" onclick="openNewsModal()">
             <h3 id="bannerTitle">📢 Duyuru Başlığı</h3>
             <p id="bannerContent">Duyuru içeriği buraya gelecek...</p>
             <span id="newsDate"></span>
-            <span style="font-size: 11px; color: #2563eb; display: block; margin-top: 6px; font-weight: bold;">👉 Haberin devamını okumak için dokunun</span>
+            <span style="font-size: 11px; color: #2563eb; display: block; margin-top: 6px; font-weight: bold;">👉 Tüm duyuruları ve haberleri görmek için dokunun</span>
         </div>
 
         <input type="text" id="searchInput" class="search-box" placeholder="🔍 İstasyon adı, marka veya adres ara..." oninput="filterAndRender()">
@@ -174,7 +188,20 @@
         </div>
     </div>
 
-    <!-- YASAL UYARI MODALI (Kapsamlı Haliyle) -->
+    <!-- TÜM HABERLER MODALI -->
+    <div id="newsListModal" class="modal-overlay" onclick="handleNewsOutsideClick(event)">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>📰 Son Dakika Haberleri & Duyurular</h3>
+                <button class="close-btn" onclick="closeNewsModal()">×</button>
+            </div>
+            <div class="modal-body" id="allNewsContainer">
+                <div style="text-align:center; padding:10px; color:#64748b;">Haberler yükleniyor...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- YASAL UYARI MODALI -->
     <div id="legalModal" class="modal-overlay" onclick="handleOutsideClick(event)">
         <div class="modal-box">
             <div class="modal-header">
@@ -272,7 +299,6 @@
         firebase.initializeApp(firebaseConfig);
         const messaging = firebase.messaging();
 
-        // Doğru Alt Klasör Yoluyla Service Worker Kaydı ve Sessiz Token Alma
         async function requestNotificationPermission() {
             try {
                 if ('serviceWorker' in navigator) {
@@ -295,7 +321,6 @@
             }
         }
 
-        // Token'ı Supabase 'fcm_tokens' tablosuna kaydetme (Sessiz Mod)
         async function saveTokenToSupabase(token) {
             try {
                 const { error } = await _supabase.from('fcm_tokens').upsert([{ token: token }], { onConflict: 'token' });
@@ -316,10 +341,10 @@
         let userMarker = null;
         let stationMarkers = [];
         let rawStations = [];
+        let fetchedNewsList = []; // Çekilen tüm haberleri saklayacak dizi
         let userLat = 38.7569;
         let userLng = 30.5387;
         let currentSort = 'distance';
-        let activeNewsUrl = ''; // Haberin orijinal linkini tutacak değişken
 
         const redIcon = L.divIcon({
             className: 'custom-red-pin',
@@ -337,30 +362,30 @@
             loadNews();
             initApp();
             
-            // Uygulama açıldıktan 2 saniye sonra bildirim sürecini arka planda başlat
             setTimeout(requestNotificationPermission, 2000);
         };
 
+        // Veritabanındaki tüm haberleri çek
         async function loadNews() {
             try {
                 const { data } = await _supabase
                     .from('news')
                     .select('*')
-                    .order('created_at', { ascending: false })
-                    .limit(1);
+                    .order('created_at', { ascending: false });
 
                 if (data && data.length > 0) {
-                    displayNewsBanner(data[0]);
+                    fetchedNewsList = data;
+                    displayNewsBanner(data[0]); // En son haberi banner'da göster
+                    renderNewsModalList(data);  // Modal listesini doldur
                 }
             } catch (e) {
-                console.error("Duyuru yüklenirken hata:", e);
+                console.error("Duyurular yüklenirken hata:", e);
             }
         }
 
         function displayNewsBanner(news) {
             document.getElementById("bannerTitle").textContent = "📢 " + news.title;
-            document.getElementById("bannerContent").textContent = news.content || "Haberin tamamını okumak için dokunun...";
-            activeNewsUrl = news.url; // Haberin orijinal linkini değişkene aktarıyoruz
+            document.getElementById("bannerContent").textContent = news.content || "Detaylar için tıklayın...";
             
             if(news.created_at) {
                 const dateObj = new Date(news.created_at);
@@ -369,12 +394,32 @@
             document.getElementById("newsBanner").style.display = "block";
         }
 
-        // Duyuru bandına tıklandığında haberin kaynağını yeni sekmede aç
-        document.getElementById("newsBanner").addEventListener('click', function() {
-            if (activeNewsUrl) {
-                window.open(activeNewsUrl, '_blank');
+        function renderNewsModalList(newsList) {
+            const container = document.getElementById("allNewsContainer");
+            container.innerHTML = "";
+
+            newsList.forEach(item => {
+                const dateStr = item.created_at ? new Date(item.created_at).toLocaleDateString('tr-TR') + " " + new Date(item.created_at).toLocaleTimeString('tr-TR', {hour: '2-digit', minute:'2-digit'}) : "";
+                
+                container.innerHTML += `
+                    <div class="news-item-card" onclick="openNewsUrl('${item.url}')">
+                        <div class="news-item-title">📰 ${item.title}</div>
+                        <div style="font-size: 12px; color: #475569; margin-bottom: 4px;">${item.content || ''}</div>
+                        <div class="news-item-date">⏱ ${dateStr}</div>
+                    </div>
+                `;
+            });
+        }
+
+        function openNewsUrl(url) {
+            if (url) {
+                window.open(url, '_blank');
             }
-        });
+        }
+
+        function openNewsModal() { document.getElementById('newsListModal').classList.add('open'); }
+        function closeNewsModal() { document.getElementById('newsListModal').classList.remove('open'); }
+        function handleNewsOutsideClick(event) { if (event.target.id === 'newsListModal') closeNewsModal(); }
 
         function openModal() { document.getElementById('legalModal').classList.add('open'); }
         function closeModal() { document.getElementById('legalModal').classList.remove('open'); }
