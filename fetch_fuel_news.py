@@ -23,6 +23,7 @@ for rss_url in RSS_URLS:
 
     for entry in feed.entries[:20]:
         title = entry.title
+        link = entry.link
         
         # Kelime eşleşmesi kontrolü
         matched = any(kw in title.lower() for kw in keywords)
@@ -30,11 +31,11 @@ for rss_url in RSS_URLS:
         if matched:
             print(f"-> Eşleşme bulundu! Ekleniyor: {title}")
             try:
-                # Sadece mevcut olan 'title' sütununu kullanıyoruz
-                data = {"title": title}
+                # Artık hem title hem url sütununa veri gönderiyoruz
+                data = {"title": title, "url": link}
                 supabase.table("news").insert(data).execute()
                 added_count += 1
             except Exception as e:
-                print(f"Bilgi/Kayıt Notu: {e}")
+                print(f"Kayıt Notu: {e}")
 
 print(f"\nİşlem tamamlandı. Eklenen toplam yeni haber sayısı: {added_count}")
