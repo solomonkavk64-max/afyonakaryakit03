@@ -1,31 +1,31 @@
-name: Gunluk Akaryakit Fiyat Guncelleme
+name: Fetch Fuel News Automatically
 
 on:
-  schedule:
-    # Her gece Türkiye saatiyle 03:00'te çalışır
-    - cron: '0 0 * * *'
   workflow_dispatch:
+  schedule:
+    # Her saat başı otomatik çalışır
+    - cron: '0 * * * *'
 
 jobs:
-  update-prices:
+  build:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Depoyu Kopyala
-      uses: actions/checkout@v3
+      - name: Repodaki Kodları Çek
+        uses: actions/checkout@v3
 
-    - name: Python Kur
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.10'
+      - name: Python Ortamını Kur
+        uses: actions/python-version@v4
+        with:
+          python-version: '3.x'
 
-    - name: Kütüphaneleri Yükle
-      run: |
-        python -m pip install --upgrade pip
-        pip install requests beautifulsoup4 supabase
+      - name: Gerekli Kütüphaneleri Yükle
+        run: |
+          python -m pip install --upgrade pip
+          pip install feedparser supabase
 
-    - name: Fiyat Güncelleme Scriptini Çalıştır
-      env:
-        SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-        SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-      run: python update_prices.py
+      - name: News Scriptini Çalıştır
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: python fetch_fuel_news.py
