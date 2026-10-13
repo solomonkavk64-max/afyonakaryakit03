@@ -52,7 +52,8 @@
 
         .container { padding: 16px; max-width: 600px; margin: auto; padding-bottom: 40px; }
         
-        #newsBanner { display: none; background: #eff6ff; border: 1px solid #bfdbfe; border-left: 5px solid #2563eb; padding: 15px; border-radius: 12px; margin-bottom: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
+        #newsBanner { display: none; background: #eff6ff; border: 1px solid #bfdbfe; border-left: 5px solid #2563eb; padding: 15px; border-radius: 12px; margin-bottom: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); cursor: pointer; transition: transform 0.1s ease, box-shadow 0.1s ease; }
+        #newsBanner:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(0,0,0,0.08); }
         #newsBanner h3 { margin: 0 0 6px 0; color: #1e40af; font-size: 15px; display: flex; align-items: center; gap: 6px; }
         #newsBanner p { margin: 0; color: #334155; font-size: 13px; line-height: 1.5; }
         #newsDate { font-size: 11px; color: #64748b; display: block; margin-top: 6px; }
@@ -146,6 +147,7 @@
             <h3 id="bannerTitle">📢 Duyuru Başlığı</h3>
             <p id="bannerContent">Duyuru içeriği buraya gelecek...</p>
             <span id="newsDate"></span>
+            <span style="font-size: 11px; color: #2563eb; display: block; margin-top: 6px; font-weight: bold;">👉 Haberin devamını okumak için dokunun</span>
         </div>
 
         <input type="text" id="searchInput" class="search-box" placeholder="🔍 İstasyon adı, marka veya adres ara..." oninput="filterAndRender()">
@@ -317,6 +319,7 @@
         let userLat = 38.7569;
         let userLng = 30.5387;
         let currentSort = 'distance';
+        let activeNewsUrl = ''; // Haberin orijinal linkini tutacak değişken
 
         const redIcon = L.divIcon({
             className: 'custom-red-pin',
@@ -356,13 +359,22 @@
 
         function displayNewsBanner(news) {
             document.getElementById("bannerTitle").textContent = "📢 " + news.title;
-            document.getElementById("bannerContent").textContent = news.content;
+            document.getElementById("bannerContent").textContent = news.content || "Haberin tamamını okumak için dokunun...";
+            activeNewsUrl = news.url; // Haberin orijinal linkini değişkene aktarıyoruz
+            
             if(news.created_at) {
                 const dateObj = new Date(news.created_at);
                 document.getElementById("newsDate").textContent = "Yayınlanma: " + dateObj.toLocaleDateString('tr-TR') + " " + dateObj.toLocaleTimeString('tr-TR', {hour: '2-digit', minute:'2-digit'});
             }
             document.getElementById("newsBanner").style.display = "block";
         }
+
+        // Duyuru bandına tıklandığında haberin kaynağını yeni sekmede aç
+        document.getElementById("newsBanner").addEventListener('click', function() {
+            if (activeNewsUrl) {
+                window.open(activeNewsUrl, '_blank');
+            }
+        });
 
         function openModal() { document.getElementById('legalModal').classList.add('open'); }
         function closeModal() { document.getElementById('legalModal').classList.remove('open'); }
