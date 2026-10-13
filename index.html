@@ -161,7 +161,7 @@
             <h3 id="bannerTitle">📢 Duyuru Başlığı</h3>
             <p id="bannerContent">Duyuru içeriği buraya gelecek...</p>
             <span id="newsDate"></span>
-            <span style="font-size: 11px; color: #2563eb; display: block; margin-top: 6px; font-weight: bold;">👉 Tüm duyuruları ve haberleri görmek için dokunun</span>
+            <span style="font-size: 11px; color: #2563eb; display: block; margin-top: 6px; font-weight: bold;">👉 Akaryakıt ve petrol haberleri için dokunun</span>
         </div>
 
         <input type="text" id="searchInput" class="search-box" placeholder="🔍 İstasyon adı, marka veya adres ara..." oninput="filterAndRender()">
@@ -188,15 +188,32 @@
         </div>
     </div>
 
-    <!-- TÜM HABERLER MODALI -->
+    <!-- TÜM HABERLER LİSTE MODALI -->
     <div id="newsListModal" class="modal-overlay" onclick="handleNewsOutsideClick(event)">
         <div class="modal-box">
             <div class="modal-header">
-                <h3>📰 Son Dakika Haberleri & Duyurular</h3>
+                <h3>📰 Akaryakıt & Petrol Haberleri</h3>
                 <button class="close-btn" onclick="closeNewsModal()">×</button>
             </div>
             <div class="modal-body" id="allNewsContainer">
                 <div style="text-align:center; padding:10px; color:#64748b;">Haberler yükleniyor...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- HABER DETAY MODALI (UYGULAMA İÇİNDE OKUMA) -->
+    <div id="newsDetailModal" class="modal-overlay" onclick="handleNewsDetailOutsideClick(event)">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3 id="detailModalTitle" style="font-size: 15px; margin-right: 10px;">Haber Detayı</h3>
+                <button class="close-btn" onclick="closeNewsDetailModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div id="detailModalDate" style="font-size: 11px; color: #64748b; margin-bottom: 10px; font-weight: bold;"></div>
+                <div id="detailModalContent" style="font-size: 13px; color: #334155; line-height: 1.6; margin-bottom: 16px;"></div>
+                
+                <a id="detailModalLink" href="#" target="_blank" class="route-btn" style="text-align:center; text-decoration:none; display:block; background:#2563eb; margin-bottom: 8px;">🌐 Orijinal Kaynaktan Tamamını Oku</a>
+                <button class="report-btn" onclick="backToNewsList()" style="background:#f1f5f9; border:1px solid #cbd5e1; color:#475569;">⬅ Haber Listesine Dön</button>
             </div>
         </div>
     </div>
@@ -286,7 +303,6 @@
         const SUPABASE_ANON_KEY = 'sb_publishable_atDC1UU40N7N-U-c3u__4A_mKuI2Oum';
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // Firebase Yapılandırması
         const firebaseConfig = {
           apiKey: "AIzaSyAql3eWJREPdKPK5BLhqd9CeYgr15Uvbi4",
           authDomain: "afyon-akaryakit.firebaseapp.com",
@@ -303,33 +319,22 @@
             try {
                 if ('serviceWorker' in navigator) {
                     const registration = await navigator.serviceWorker.register('/afyonakaryakit03/firebase-messaging-sw.js');
-
                     const permission = await Notification.requestPermission();
                     if (permission === 'granted') {
                         const token = await messaging.getToken({
                             serviceWorkerRegistration: registration,
                             vapidKey: 'BOmfCJOjA_hSLQwuSZJQoDU3VLEqOvKEhRiX35gJ5YvhyD7t4ZV18-j0ttdZWueHdx1RbqTF6TWD4vlFnwsiYU4'
                         });
-
-                        if (token) {
-                            await saveTokenToSupabase(token);
-                        }
+                        if (token) { await saveTokenToSupabase(token); }
                     }
                 }
-            } catch (error) {
-                console.error("Bildirim izni hatası:", error);
-            }
+            } catch (error) { console.error("Bildirim izni hatası:", error); }
         }
 
         async function saveTokenToSupabase(token) {
             try {
-                const { error } = await _supabase.from('fcm_tokens').upsert([{ token: token }], { onConflict: 'token' });
-                if (error) {
-                    console.error("Supabase Kayıt Hatası:", error.message);
-                }
-            } catch (e) {
-                console.error("Supabase İstisna Hatası:", e.message);
-            }
+                await _supabase.from('fcm_tokens').upsert([{ token: token }], { onConflict: 'token' });
+            } catch (e) { console.error("Supabase İstisna Hatası:", e.message); }
         }
 
         let map = L.map('map').setView([38.7569, 30.5387], 11);
@@ -341,7 +346,7 @@
         let userMarker = null;
         let stationMarkers = [];
         let rawStations = [];
-        let fetchedNewsList = []; // Çekilen tüm haberleri saklayacak dizi
+        let fetchedNewsList = [];
         let userLat = 38.7569;
         let userLng = 30.5387;
         let currentSort = 'distance';
@@ -361,22 +366,20 @@
 
             loadNews();
             initApp();
-            
             setTimeout(requestNotificationPermission, 2000);
         };
 
-        // Veritabanındaki tüm haberleri çek
         async function loadNews() {
             try {
                 const { data } = await _supabase
                     .from('news')
                     .select('*')
-                    .order('created_at', { ascending: false });
+                    .order('id', { ascending: false });
 
                 if (data && data.length > 0) {
                     fetchedNewsList = data;
-                    displayNewsBanner(data[0]); // En son haberi banner'da göster
-                    renderNewsModalList(data);  // Modal listesini doldur
+                    displayNewsBanner(data[0]);
+                    renderNewsModalList(data);
                 }
             } catch (e) {
                 console.error("Duyurular yüklenirken hata:", e);
@@ -401,20 +404,53 @@
             newsList.forEach(item => {
                 const dateStr = item.created_at ? new Date(item.created_at).toLocaleDateString('tr-TR') + " " + new Date(item.created_at).toLocaleTimeString('tr-TR', {hour: '2-digit', minute:'2-digit'}) : "";
                 
+                const encodedTitle = encodeURIComponent(item.title || '');
+                const encodedContent = encodeURIComponent(item.content || '');
+                const encodedUrl = encodeURIComponent(item.url || '');
+                
                 container.innerHTML += `
-                    <div class="news-item-card" onclick="openNewsUrl('${item.url}')">
+                    <div class="news-item-card" onclick="openNewsDetail('${encodedTitle}', '${encodedContent}', '${dateStr}', '${encodedUrl}')">
                         <div class="news-item-title">📰 ${item.title}</div>
-                        <div style="font-size: 12px; color: #475569; margin-bottom: 4px;">${item.content || ''}</div>
+                        <div style="font-size: 12px; color: #475569; margin-bottom: 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${item.content || ''}</div>
                         <div class="news-item-date">⏱ ${dateStr}</div>
                     </div>
                 `;
             });
         }
 
-        function openNewsUrl(url) {
+        // Haber detayını uygulama içinde açan fonksiyon
+        function openNewsDetail(titleEncoded, contentEncoded, dateStr, urlEncoded) {
+            const title = decodeURIComponent(titleEncoded);
+            const content = decodeURIComponent(contentEncoded);
+            const url = decodeURIComponent(urlEncoded);
+
+            document.getElementById('detailModalTitle').textContent = title;
+            document.getElementById('detailModalDate').textContent = "⏱ Yayınlanma: " + dateStr;
+            document.getElementById('detailModalContent').textContent = content || "Haber içeriği bulunmuyor.";
+            
+            const linkBtn = document.getElementById('detailModalLink');
             if (url) {
-                window.open(url, '_blank');
+                linkBtn.href = url;
+                linkBtn.style.display = "block";
+            } else {
+                linkBtn.style.display = "none";
             }
+
+            closeNewsModal();
+            document.getElementById('newsDetailModal').classList.add('open');
+        }
+
+        function closeNewsDetailModal() {
+            document.getElementById('newsDetailModal').classList.remove('open');
+        }
+
+        function handleNewsDetailOutsideClick(event) {
+            if (event.target.id === 'newsDetailModal') closeNewsDetailModal();
+        }
+
+        function backToNewsList() {
+            closeNewsDetailModal();
+            openNewsModal();
         }
 
         function openNewsModal() { document.getElementById('newsListModal').classList.add('open'); }
