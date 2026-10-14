@@ -79,7 +79,7 @@
         .station-title { font-size: 17px; font-weight: bold; color: #0f172a; }
         .station-address { font-size: 12px; color: #64748b; margin-bottom: 8px; }
         
-        .station-rating-badge { display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: bold; color: #d97706; background: #fef3c7; padding: 3px 8px; border-radius: 6px; margin-bottom: 8px; width: fit-content; }
+        .station-rating-badge { display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: bold; color: #d97706; background: #fef3c7; padding: 4px 8px; border-radius: 6px; margin-bottom: 8px; width: fit-content; }
         
         .distance-badge { background: #e0f2fe; color: #0369a1; padding: 5px 10px; border-radius: 8px; font-size: 12px; font-weight: bold; }
         
@@ -115,7 +115,6 @@
         .modal-body { font-size: 13px; color: #334155; line-height: 1.6; max-height: 65vh; overflow-y: auto; }
         .modal-body h4 { color: #0f172a; margin-top: 12px; margin-bottom: 4px; font-size: 13px; }
         
-        /* Star Rating Styles */
         .star-rating-container { display: flex; justify-content: center; gap: 8px; font-size: 32px; cursor: pointer; margin: 12px 0; color: #cbd5e1; }
         .star-rating-container .star.active { color: #f59e0b; }
         .rating-slider-group { background: #f8fafc; padding: 10px; border-radius: 10px; margin-bottom: 12px; }
@@ -349,6 +348,22 @@
         </div>
     </div>
 
+    <!-- YORUMLARI VE DEĞERLENDİRMELERİ İNCELEME MODALI -->
+    <div id="commentsModal" class="modal-overlay" onclick="handleCommentsOutsideClick(event)">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>⭐ İstasyon Değerlendirmeleri</h3>
+                <button class="close-btn" onclick="closeCommentsModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <p style="margin-top:0; font-weight:bold; color:#0f172a; text-align:center;" id="commentsStationName"></p>
+                <div id="commentsContainer">
+                    <div style="text-align:center; padding:15px; color:#64748b;">Değerlendirmeler yükleniyor...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     
@@ -404,7 +419,7 @@
         let userMarker = null;
         let stationMarkers = [];
         let rawStations = [];
-        let stationRatingsMap = {}; // İstasyon puan özetleri için sözlük
+        let stationRatingsMap = {};
         let fetchedNewsList = [];
         let userLat = 38.7569;
         let userLng = 30.5387;
@@ -430,7 +445,6 @@
             setTimeout(requestNotificationPermission, 2000);
         };
 
-        // Cihaz için Benzersiz ID (Mükerrer oylamayı engellemek için)
         function getDeviceId() {
             let deviceId = localStorage.getItem('app_device_id');
             if (!deviceId) {
@@ -524,7 +538,6 @@
         function closeModal() { document.getElementById('legalModal').classList.remove('open'); }
         function handleOutsideClick(event) { if (event.target.id === 'legalModal') closeModal(); }
 
-        // Fiyat Bildir Modal İşlemleri
         function openReportModal(stationId, stationName, benzin, motorin, lpg) {
             document.getElementById('reportStationId').value = stationId;
             document.getElementById('reportStationName').textContent = stationName;
@@ -539,7 +552,6 @@
         function closeReportModal() { document.getElementById('reportModal').classList.remove('open'); }
         function handleReportOutsideClick(event) { if (event.target.id === 'reportModal') closeReportModal(); }
 
-        // Puanlama Modal İşlemleri
         function openRatingModal(stationId, stationName) {
             document.getElementById('ratingStationId').value = stationId;
             document.getElementById('ratingStationName').textContent = stationName;
@@ -553,6 +565,53 @@
         }
         function closeRatingModal() { document.getElementById('ratingModal').classList.remove('open'); }
         function handleRatingOutsideClick(event) { if (event.target.id === 'ratingModal') closeRatingModal(); }
+
+        async function openCommentsModal(stationId, stationName) {
+            document.getElementById('commentsStationName').textContent = stationName;
+            const container = document.getElementById('commentsContainer');
+            container.innerHTML = '<div style="text-align:center; padding:15px; color:#64748b;">Değerlendirmeler yükleniyor...</div>';
+            document.getElementById('commentsModal').classList.add('open');
+
+            try {
+                const { data, error } = await _supabase
+                    .from('station_ratings')
+                    .select('*')
+                    .eq('station_id', parseInt(stationId))
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+
+                if (!data || data.length === 0) {
+                    container.innerHTML = '<div style="text-align:center; padding:15px; color:#64748b;">Henüz yapılmış bir yorum bulunmuyor.</div>';
+                    return;
+                }
+
+                container.innerHTML = '';
+                data.forEach(item => {
+                    const dateStr = item.created_at ? new Date(item.created_at).toLocaleDateString('tr-TR') : '';
+                    const commentText = item.comment ? item.comment : '<i>(Yorum yapılmadı, sadece puan verildi)</i>';
+
+                    container.innerHTML += `
+                        <div style="background:#f8fafc; border:1px solid #e2e8f0; padding:12px; border-radius:10px; margin-bottom:10px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                                <span style="font-weight:bold; color:#f59e0b; font-size:14px;">⭐ ${item.rating} / 5</span>
+                                <span style="font-size:11px; color:#94a3b8;">${dateStr}</span>
+                            </div>
+                            <div style="font-size:11px; color:#475569; margin-bottom:6px; display:flex; gap:10px;">
+                                <span>🧼 Temizlik: <b>${item.cleanliness_rating || 5}/5</b></span>
+                                <span>👨‍🔧 Hizmet: <b>${item.service_rating || 5}/5</b></span>
+                            </div>
+                            <div style="font-size:13px; color:#334155; line-height:1.4;">${commentText}</div>
+                        </div>
+                    `;
+                });
+            } catch (e) {
+                console.error("Yorumlar çekilirken hata:", e);
+                container.innerHTML = '<div style="text-align:center; padding:15px; color:#dc2626;">Yorumlar yüklenirken bir hata oluştu.</div>';
+            }
+        }
+        function closeCommentsModal() { document.getElementById('commentsModal').classList.remove('open'); }
+        function handleCommentsOutsideClick(event) { if (event.target.id === 'commentsModal') closeCommentsModal(); }
 
         function setStarRating(val) {
             currentSelectedRating = val;
@@ -597,7 +656,7 @@
                 } else {
                     alert("Değerlendirmeniz için teşekkür ederiz! ⭐");
                     closeRatingModal();
-                    loadData(); // Puanları güncellemek için verileri yeniden çek
+                    loadData();
                 }
             } catch (err) {
                 console.error("Puan kaydetme hatası:", err);
@@ -706,7 +765,6 @@
             const list = document.getElementById('list');
             list.innerHTML = '<div style="text-align:center; padding: 20px;">Veriler yükleniyor...</div>';
             
-            // İstasyonları ve Puan Özetlerini Paralel Çek
             const [stationsRes, ratingsRes] = await Promise.all([
                 _supabase.from('gas_stations').select('*'),
                 _supabase.from('station_rating_summary').select('*')
@@ -719,7 +777,6 @@
 
             rawStations = stationsRes.data || [];
             
-            // Puan özetlerini haritalandır (ID bazlı hızlı erişim için)
             stationRatingsMap = {};
             if (ratingsRes.data) {
                 ratingsRes.data.forEach(r => {
@@ -804,12 +861,13 @@
                 const lpgVal = st.lpg_price ? `${st.lpg_price} ₺` : '-';
 
                 // Puan rozeti metni (Düzeltildi)
-const ratingVal = st.avgRating ? parseFloat(st.avgRating).toFixed(1) : '0.0';
-const ratingBadgeHtml = st.totalReviews > 0 
-    ? `<div class="station-rating-badge" onclick="event.stopPropagation(); openCommentsModal('${st.id}', '${brandName.replace(/'/g, "\\'")}')" style="cursor:pointer;">
-        ⭐ ${ratingVal} <span style="font-weight:normal; color:#78350f;">(${st.totalReviews} değerlendirme - Detaylar)</span>
-       </div>`
-    : `<div class="station-rating-badge" style="color:#64748b; background:#f1f5f9;">⭐ Henüz puanlanmadı</div>`;
+                const ratingVal = st.avgRating ? parseFloat(st.avgRating).toFixed(1) : '0.0';
+                const ratingBadgeHtml = st.totalReviews > 0 
+                    ? `<div class="station-rating-badge" onclick="event.stopPropagation(); openCommentsModal('${st.id}', '${brandName.replace(/'/g, "\\'")}')" style="cursor:pointer;">
+                        ⭐ ${ratingVal} <span style="font-weight:normal; color:#78350f;">(${st.totalReviews} değerlendirme - Detaylar)</span>
+                       </div>`
+                    : `<div class="station-rating-badge" style="color:#64748b; background:#f1f5f9;">⭐ Henüz puanlanmadı</div>`;
+
                 const stLat = parseFloat(st.latitude);
                 const stLng = parseFloat(st.longitude);
                 const geoUrl = `geo:${stLat},${stLng}?q=${stLat},${stLng}(${encodeURIComponent(brandName)})`;
