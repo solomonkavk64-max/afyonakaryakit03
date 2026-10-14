@@ -39,7 +39,8 @@ def is_fuel_news(title, summary):
 
 def fetch_and_store_news():
     print("🧹 Eski haberler temizleniyor...")
-    supabase.table("news").delete().neq("id", "00000000-0000-0000-0000-000000000000").execute()
+    # id sütunu bigint olduğu için sayısal 0 kontrolü yapıyoruz:
+    supabase.table("news").delete().neq("id", 0).execute()
 
     print("🔍 TRT, AA ve diğer geniş kaynaklardan akaryakıt haberleri çekiliyor...")
     news_list = []
