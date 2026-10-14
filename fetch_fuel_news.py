@@ -13,13 +13,14 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# Google News Olmayan, Tam 15 Adet Güvenilir Ulusal Ekonomi ve Enerji Kaynağı
+# Ulusal TV Kanalları ve Prestijli Ekonomi Siteleri
 RSS_FEEDS = [
-    "https://www.enerjigunlugu.net/feed",
     "https://www.trthaber.com/ekonomi_articles.rss",
-    "https://www.aa.com.tr/tr/rss/default?cat=ekonomi",
     "https://www.ntv.com.tr/ekonomi.rss",
     "https://www.haberturk.com/rss/kategori/ekonomi.xml",
+    "https://www.ahaber.com.tr/rss/ekonomi.xml",
+    "https://www.tgrthaber.com/rss/ekonomi.xml",
+    "https://www.aa.com.tr/tr/rss/default?cat=ekonomi",
     "https://www.bloomberght.com/rss",
     "https://www.dunya.com/rss?kategori=ekonomi",
     "https://www.hurriyet.com.tr/rss/ekonomi",
@@ -27,17 +28,15 @@ RSS_FEEDS = [
     "https://www.sabah.com.tr/rss/ekonomi.xml",
     "https://www.sozcu.com.tr/kategori/ekonomi/feed",
     "https://www.ensonhaber.com/rss/ekonomi.xml",
-    "https://www.karar.com/rss/ekonomi",
-    "https://www.star.com.tr/rss/rss.asp?kategori=ekonomi",
-    "https://www.aksam.com.tr/rss/ekonomi.xml"
+    "https://www.enerjigunlugu.net/feed"
 ]
 
-# BAŞLIKTA OLMAK ZORUNDA OLAN SAF AKARYAKIT KELİMELERİ
-MUST_HAVE_IN_TITLE = [
-    "akaryakıt", "benzin", "motorin", "mazot", "lpg", "otogaz", "brent petrol", "brent"
+# ZORUNLU AKARYAKIT KELİMELERİ (Başlık veya Özet içinde geçmeli)
+MUST_HAVE_KEYWORDS = [
+    "akaryakıt", "benzin", "motorin", "mazot", "lpg", "otogaz", "brent"
 ]
 
-# YEREL VE ALAKASIZ KELİME / ŞEHİR ENGELİ
+# ALAKASIZ VE YEREL ENGEL KELİMELERİ
 EXCLUDE_KEYWORDS = [
     "kpss", "sınav", "kaçakçılık", "alkol", "tütün", "sigara", "enflasyon", 
     "faiz", "borsa", "hisse", "palamut", "balık", "facebook", "trump", "grönland",
@@ -49,21 +48,21 @@ def clean_html(raw_html):
     cleanr = re.compile('<.*?>')
     return re.sub(cleanr, '', raw_html).strip()
 
-def is_valid_fuel_news(title, entry_date):
-    title_lower = title.lower()
+def is_fuel_news(title, summary, entry_date):
+    full_text = f"{title} {summary}".lower()
     
-    # 1. Yasaklı/yerel kelimeler varsa eliyoruz
-    if any(ex in title_lower for ex in EXCLUDE_KEYWORDS):
+    # 1. Yasaklı/yerel kelime varsa eliyoruz
+    if any(ex in full_text for ex in EXCLUDE_KEYWORDS):
         return False
         
-    # 2. SADECE BAŞLIKTA zorunlu akaryakıt kelimelerinden biri olmalı
-    if not any(kw in title_lower for kw in MUST_HAVE_IN_TITLE):
+    # 2. Metinde mutlaka zorunlu akaryakıt kelimelerinden biri geçmeli
+    if not any(kw in full_text for kw in MUST_HAVE_KEYWORDS):
         return False
         
-    # 3. Tarih Kontrolü (Son 48 saat / 2 gün)
+    # 3. Tarih Kontrolü (Son 3 gün / 72 saat içindeki haberler)
     if entry_date:
         now = datetime.now(timezone.utc)
-        if entry_date < (now - timedelta(days=2)):
+        if entry_date < (now - timedelta(days=3)):
             return False
             
     return True
@@ -72,7 +71,7 @@ def fetch_and_store_news():
     print("🧹 Eski haberler temizleniyor...")
     supabase.table("news").delete().neq("id", 0).execute()
 
-    print("🔍 15 ulusal ekonomi ve enerji kaynağından saf akaryakıt haberleri taranıyor...")
+    print("🔍 Ulusal kanallardan ve haber sitelerinden akaryakıt haberleri çekiliyor...")
     news_list = []
     seen_titles = set()
 
@@ -90,12 +89,12 @@ def fetch_and_store_news():
                     import time
                     entry_date = datetime.fromtimestamp(time.mktime(published_parsed), timezone.utc)
 
-                # Mükerrer başlık kontrolü
+                # Mükerrer kontrolü
                 short_title = re.sub(r'[^a-zA-Z0-9ğüşıöçĞÜŞİÖÇ]', '', title[:20].lower())
                 if short_title in seen_titles:
                     continue
 
-                if is_valid_fuel_news(title, entry_date):
+                if is_fuel_news(title, summary, entry_date):
                     seen_titles.add(short_title)
                     news_list.append({
                         "title": title,
@@ -107,7 +106,7 @@ def fetch_and_store_news():
 
     if news_list:
         supabase.table("news").insert(news_list[:15]).execute()
-        print(f"✨ Toplam {len(news_list[:15])} adet ulusal akaryakıt haberi eklendi.")
+        print(f"✨ Toplam {len(news_list[:15])} adet taze ulusal akaryakıt haberi veritabanına eklendi.")
     else:
         print("Kriterlere uygun yeni haber bulunamadı.")
 
