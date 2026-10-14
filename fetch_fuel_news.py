@@ -13,27 +13,36 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# Genişletilmiş Haber Kaynakları
+# 15 Farklı Güvenilir ve Enerji/Ekonomi Odaklı RSS Kaynağı
 RSS_FEEDS = [
+    "https://www.enerjigunlugu.net/feed", # Doğrudan enerji ve akaryakıt odaklı
     "https://www.trthaber.com/ekonomi_articles.rss",
     "https://www.aa.com.tr/tr/rss/default?cat=ekonomi",
-    "https://www.ensonhaber.com/rss/ekonomi.xml",
     "https://www.ntv.com.tr/ekonomi.rss",
     "https://www.haberturk.com/rss/kategori/ekonomi.xml",
     "https://www.bloomberght.com/rss",
-    "https://www.dunya.com/rss?kategori=ekonomi"
+    "https://www.dunya.com/rss?kategori=ekonomi",
+    "https://www.hurriyet.com.tr/rss/ekonomi",
+    "https://www.milliyet.com.tr/rss/rssnew/ekonomiresimli.xml",
+    "https://www.sabah.com.tr/rss/ekonomi.xml",
+    "https://www.sozcu.com.tr/kategori/ekonomi/feed",
+    "https://www.ensonhaber.com/rss/ekonomi.xml",
+    "https://www.star.com.tr/rss/rss.asp?kategori=ekonomi",
+    "https://www.aksam.com.tr/rss/ekonomi.xml",
+    "https://www.karar.com/rss/ekonomi"
 ]
 
-# Kabul Edilen Akaryakıt ve Enerji Kelimeleri
+# Sıkı Akaryakıt ve Petrol Kelimeleri (Haberde bunlardan en az biri olmak ZORUNDA)
 FUEL_KEYWORDS = [
     "akaryakıt", "benzin", "motorin", "mazot", "lpg", "otogaz", 
-    "brent", "petrol", "epdk", "zam", "indirim", "pompa", "tabela fiyat"
+    "brent", "petrol", "epdk", "zam", "indirim", "pompa", "tabela fiyat", "tavan fiyat"
 ]
 
-# Kesinlikle İstenmeyen Alakasız Kelimeler
+# Kesinlikle İstenmeyen Alakasız Kelimeler (Geçerse haber direkt elenir)
 EXCLUDE_KEYWORDS = [
     "palamut", "balık", "facebook", "faiz", "mevduat", "borsa", 
-    "hisse", "kredi", "konut", "ev fiyat", "altın", "gram altın"
+    "hisse", "kredi", "konut", "ev fiyat", "altın", "gram altın",
+    "asgari ücret", "emekli", "memur", "otomobil", "trafik cezası"
 ]
 
 def clean_html(raw_html):
@@ -47,14 +56,13 @@ def is_valid_news(title, summary, entry_date):
     if any(ex in text for ex in EXCLUDE_KEYWORDS):
         return False
         
-    # 2. Akaryakıt/Enerji kelimesi geçiyor mu?
+    # 2. Akaryakıt/Petrol kelimesi geçiyor mu?
     if not any(kw in text for kw in FUEL_KEYWORDS):
         return False
         
-    # 3. Tarih Kontrolü (Eğer RSS'te tarih varsa, son 5 günden eski olmasın)
+    # 3. Tarih Kontrolü (Son 5 günden eski haberler alınmaz)
     if entry_date:
         now = datetime.now(timezone.utc)
-        # 5 günden eski haberleri direkt eliyoruz
         if entry_date < (now - timedelta(days=5)):
             return False
             
@@ -64,7 +72,7 @@ def fetch_and_store_news():
     print("🧹 Eski haberler temizleniyor...")
     supabase.table("news").delete().neq("id", 0).execute()
 
-    print("🔍 Taze ve filtrelenmiş akaryakıt haberleri taranıyor...")
+    print("🔍 15 farklı kaynak taranarak saf akaryakıt haberleri toplanıyor...")
     news_list = []
     seen_titles = set()
 
@@ -76,14 +84,13 @@ def fetch_and_store_news():
                 summary = clean_html(entry.get("summary", entry.get("description", "")))
                 link = entry.get("link", "")
 
-                # Tarihi al (yoksa güncel kabul et)
                 published_parsed = entry.get("published_parsed", entry.get("updated_parsed"))
                 entry_date = None
                 if published_parsed:
                     import time
                     entry_date = datetime.fromtimestamp(time.mktime(published_parsed), timezone.utc)
 
-                # Mükerrer kontrolü
+                # Mükerrer başlık kontrolü
                 short_title = re.sub(r'[^a-zA-Z0-9ğüşıöçĞÜŞİÖÇ]', '', title[:20].lower())
                 if short_title in seen_titles:
                     continue
@@ -99,7 +106,7 @@ def fetch_and_store_news():
             print(f"Hata oluşan kaynak ({feed_url}): {e}")
 
     if news_list:
-        # En güncel 15 haberi veritabanına kaydedelim
+        # En fazla 15 adet taze ve saf akaryakıt haberini veritabanına kaydedelim
         supabase.table("news").insert(news_list[:15]).execute()
         print(f"✨ Toplam {len(news_list[:15])} adet taze akaryakıt haberi eklendi.")
     else:
