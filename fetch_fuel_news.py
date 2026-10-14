@@ -13,7 +13,7 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# Ulusal TV Kanalları ve Prestijli Ekonomi Siteleri
+# 15 Ulusal Ekonomi ve Haber Kaynağı
 RSS_FEEDS = [
     "https://www.trthaber.com/ekonomi_articles.rss",
     "https://www.ntv.com.tr/ekonomi.rss",
@@ -28,20 +28,20 @@ RSS_FEEDS = [
     "https://www.sabah.com.tr/rss/ekonomi.xml",
     "https://www.sozcu.com.tr/kategori/ekonomi/feed",
     "https://www.ensonhaber.com/rss/ekonomi.xml",
-    "https://www.enerjigunlugu.net/feed"
+    "https://www.enerjigunlugu.net/feed",
+    "https://www.karar.com/rss/ekonomi"
 ]
 
-# ZORUNLU AKARYAKIT KELİMELERİ (Başlık veya Özet içinde geçmeli)
-MUST_HAVE_KEYWORDS = [
-    "akaryakıt", "benzin", "motorin", "mazot", "lpg", "otogaz", "brent"
+# Genişletilmiş Akaryakıt Terimleri Havuzu
+FUEL_KEYWORDS = [
+    "akaryakıt", "benzin", "motorin", "mazot", "lpg", "otogaz", 
+    "brent", "petrol", "epdk", "pompa", "tabela", "enerji"
 ]
 
-# ALAKASIZ VE YEREL ENGEL KELİMELERİ
+# Sadece Kesin Alakasız Genel Konular (Sınav, borsa vb.)
 EXCLUDE_KEYWORDS = [
-    "kpss", "sınav", "kaçakçılık", "alkol", "tütün", "sigara", "enflasyon", 
-    "faiz", "borsa", "hisse", "palamut", "balık", "facebook", "trump", "grönland",
-    "muğla", "izmir", "ankara", "istanbul", "bursa", "antalya", "adana", "konya", 
-    "trabzon", "eskişehir", "ege saati", "yenigün"
+    "kpss", "sınav", "kaçakçılık", "alkol", "tütün", "sigara", 
+    "faiz", "borsa", "hisse", "palamut", "balık", "facebook", "trump"
 ]
 
 def clean_html(raw_html):
@@ -51,18 +51,18 @@ def clean_html(raw_html):
 def is_fuel_news(title, summary, entry_date):
     full_text = f"{title} {summary}".lower()
     
-    # 1. Yasaklı/yerel kelime varsa eliyoruz
+    # 1. Alakasız genel konu varsa eliyoruz
     if any(ex in full_text for ex in EXCLUDE_KEYWORDS):
         return False
         
-    # 2. Metinde mutlaka zorunlu akaryakıt kelimelerinden biri geçmeli
-    if not any(kw in full_text for kw in MUST_HAVE_KEYWORDS):
+    # 2. Akaryakıt/Enerji kelimelerinden en az biri geçmeli
+    if not any(kw in full_text for kw in FUEL_KEYWORDS):
         return False
         
-    # 3. Tarih Kontrolü (Son 3 gün / 72 saat içindeki haberler)
+    # 3. Tarih Kontrolü (Son 5 güne ait haberler kabul edilir)
     if entry_date:
         now = datetime.now(timezone.utc)
-        if entry_date < (now - timedelta(days=3)):
+        if entry_date < (now - timedelta(days=5)):
             return False
             
     return True
@@ -71,7 +71,7 @@ def fetch_and_store_news():
     print("🧹 Eski haberler temizleniyor...")
     supabase.table("news").delete().neq("id", 0).execute()
 
-    print("🔍 Ulusal kanallardan ve haber sitelerinden akaryakıt haberleri çekiliyor...")
+    print("🔍 Ulusal kanallardan esnetilmiş akaryakıt haberleri toplanıyor...")
     news_list = []
     seen_titles = set()
 
@@ -106,7 +106,7 @@ def fetch_and_store_news():
 
     if news_list:
         supabase.table("news").insert(news_list[:15]).execute()
-        print(f"✨ Toplam {len(news_list[:15])} adet taze ulusal akaryakıt haberi veritabanına eklendi.")
+        print(f"✨ Toplam {len(news_list[:15])} adet güncel akaryakıt haberi veritabanına eklendi.")
     else:
         print("Kriterlere uygun yeni haber bulunamadı.")
 
