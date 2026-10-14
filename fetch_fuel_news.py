@@ -1,101 +1,77 @@
 import os
+import re
 import feedparser
-from datetime import datetime, timezone, timedelta
-from supabase import create_client
+from supabase import create_client, Client
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
 
-supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+if not SUPABASE_URL or not SUPABASE_KEY:
+    print("Error: Supabase credentials missing.")
+    exit(1)
 
-# Çeşitlendirilmiş ve Sektörel RSS Kaynakları
-rss_urls = [
-    # Çeşitli Genel Ekonomi Akışları
-    "https://www.haberturk.com/rss/kategori/ekonomi.xml",
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+# Genişletilmiş Haber Kaynakları (TRT, AA, Ensonhaber, NTV, Habertürk, Dünya vb.)
+RSS_FEEDS = [
+    "https://www.trthaber.com/ekonomi_articles.rss",
+    "https://www.aa.com.tr/tr/rss/default?cat=ekonomi",
+    "https://www.ensonhaber.com/rss/ekonomi.xml",
     "https://www.ntv.com.tr/ekonomi.rss",
-    "https://www.cnnturk.com/feed/rss/ekonomi/news",
-    "https://www.dünya.com/rss",
+    "https://www.haberturk.com/rss/kategori/ekonomi.xml",
     "https://www.bloomberght.com/rss",
-    # Otomotiv ve Sektör Portalları
-    "https://www.log.com.tr/feed/",
-    "https://www.donanimhaber.com/rss/otomobil/"
+    "https://www.dunya.com/rss?kategori=ekonomi"
 ]
 
-# Sadece doğrudan akaryakıt ve petrol odaklı terimler
-PURE_FUEL_KEYWORDS = [
-    'benzin', 'motorin', 'lpg', 'otogaz', 'akaryakıt', 
-    'petrol', 'brent', 'mazot', 'motorine', 'benzine', 'akaryakıta',
-    'tüpraş', 'opet', 'shell', 'opec', 'epdk', 'otogaza'
+# Duyuru sekmesi için Akaryakıt Filtre Kelimeleri
+FUEL_KEYWORDS = [
+    "akaryakıt", "benzin", "motorin", "mazot", "lpg", "otogaz", 
+    "epdk", "brent petrol", "petrol fiyat", "zam", "indirim", "pompa fiyat"
 ]
 
-# Akaryakıt dışı ekonomi konularını KESİNLİKLE engelleyen negatif filtre
-EXCLUDE_KEYWORDS = [
-    'altın', 'gram altın', 'çeyrek', 'dolar', 'euro', 'faiz', 
-    'borsa', 'enflasyon', 'konut', 'kredi', 'asgari ücret', 'emekli',
-    'mevduat', 'hisse', 'tahvil', 'bitcoin', 'kripto'
-]
+def clean_html(raw_html):
+    cleanr = re.compile('<.*?>')
+    return re.sub(cleanr, '', raw_html).strip()
 
-def is_valid_fuel_news(title, summary):
+def is_fuel_news(title, summary):
     text = f"{title} {summary}".lower()
-    
-    # 1. Alakasız konu tespit edilirse pas geç
-    if any(ex in text for ex in EXCLUDE_KEYWORDS):
-        return False
-        
-    # 2. Saf akaryakıt kelimelerinden en az biri bulunmalı
-    return any(word in text for word in PURE_FUEL_KEYWORDS)
+    return any(keyword in text for keyword in FUEL_KEYWORDS)
 
-def fetch_fresh_news():
+def fetch_and_store_news():
+    print("🧹 Eski haberler temizleniyor...")
+    supabase.table("news").delete().neq("id", "00000000-0000-0000-0000-000000000000").execute()
+
+    print("🔍 TRT, AA ve diğer geniş kaynaklardan akaryakıt haberleri çekiliyor...")
     news_list = []
     seen_titles = set()
-    now = datetime.now(timezone.utc)
-    
-    for url in rss_urls:
+
+    for feed_url in RSS_FEEDS:
         try:
-            feed = feedparser.parse(url)
+            feed = feedparser.parse(feed_url)
             for entry in feed.entries:
-                title = entry.get('title', '').strip()
-                summary = entry.get('summary', entry.get('description', '')).strip()
-                link = entry.get('link', '').strip()
-                
-                # Tarih Kontrolü: 48 saatten eski veya tarihi okunamayan haberleri ele
-                published_parsed = entry.get('published_parsed') or entry.get('updated_parsed')
-                if not published_parsed:
+                title = entry.title.strip()
+                summary = clean_html(entry.get("summary", entry.get("description", "")))
+                link = entry.get("link", "")
+
+                if title in seen_titles:
                     continue
-                    
-                pub_date = datetime(*published_parsed[:6], tzinfo=timezone.utc)
-                if now - pub_date > timedelta(hours=48):
-                    continue
-                
-                if title and link and title not in seen_titles:
-                    if is_valid_fuel_news(title, summary):
-                        seen_titles.add(title)
-                        news_list.append({
-                            "title": title,
-                            "content": summary,
-                            "url": link
-                        })
+
+                if is_fuel_news(title, summary):
+                    seen_titles.add(title)
+                    news_list.append({
+                        "title": title,
+                        "content": summary[:250] + "..." if len(summary) > 250 else summary,
+                        "url": link
+                    })
         except Exception as e:
-            print(f"Kaynak taranırken hata ({url}): {e}")
-                
-    return news_list
+            print(f"Hata oluşan kaynak ({feed_url}): {e}")
 
-def update_news_table():
-    print("🧹 Eski haberler temizleniyor...")
-    try:
-        supabase.table('news').delete().neq('id', 0).execute()
-    except Exception as e:
-        print(f"Eski haberler silinirken hata: {e}")
-
-    print("🔍 Çeşitlendirilmiş kaynaklardan sadece taze akaryakıt haberleri çekiliyor...")
-    fresh_news = fetch_fresh_news()
-
-    if fresh_news:
-        print(f"✨ Toplam {len(fresh_news)} adet güncel akaryakıt haberi eklendi.")
-        supabase.table('news').insert(fresh_news).execute()
-        print("İşlem başarıyla tamamlandı!")
+    if news_list:
+        # En güncel 15 haberi alıp veritabanına ekleyelim
+        supabase.table("news").insert(news_list[:15]).execute()
+        print(f"✨ Toplam {len(news_list[:15])} adet güncel akaryakıt haberi eklendi.")
     else:
-        print("Son 48 saat içinde kriterlere uyan akaryakıt haberi bulunamadı.")
+        print("Gerekli kriterlere uygun yeni haber bulunamadı.")
 
 if __name__ == "__main__":
-    update_news_table()
+    fetch_and_store_news()
