@@ -12,7 +12,7 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# Genişletilmiş Haber Kaynakları (TRT, AA, Ensonhaber, NTV, Habertürk, Dünya vb.)
+# Odaklanmış RSS Kaynakları
 RSS_FEEDS = [
     "https://www.trthaber.com/ekonomi_articles.rss",
     "https://www.aa.com.tr/tr/rss/default?cat=ekonomi",
@@ -23,26 +23,37 @@ RSS_FEEDS = [
     "https://www.dunya.com/rss?kategori=ekonomi"
 ]
 
-# Duyuru sekmesi için Akaryakıt Filtre Kelimeleri
-FUEL_KEYWORDS = [
+# ZORUNLU AKARYAKIT KELİMELERİ (Haberde bunlardan en az BİRİ olmak ZORUNDA)
+PURE_FUEL_KEYWORDS = [
     "akaryakıt", "benzin", "motorin", "mazot", "lpg", "otogaz", 
-    "epdk", "brent petrol", "petrol fiyat", "zam", "indirim", "pompa fiyat"
+    "brent petrol", "epdk", "pompa fiyat", "yakıt"
+]
+
+# YASAKLI KELİMELER (Bunlar geçerse haber DİREKT ELENİR)
+EXCLUDE_KEYWORDS = [
+    "palamut", "balık", "facebook", "faiz", "mevduat", "borsa", 
+    "hisse", "kredi", "ev fiyat", "konut", "kuruş", "dolar", "euro"
 ]
 
 def clean_html(raw_html):
     cleanr = re.compile('<.*?>')
     return re.sub(cleanr, '', raw_html).strip()
 
-def is_fuel_news(title, summary):
+def is_pure_fuel_news(title, summary):
     text = f"{title} {summary}".lower()
-    return any(keyword in text for keyword in FUEL_KEYWORDS)
+    
+    # 1. Yasaklı kelime varsa eliyoruz
+    if any(ex in text for ex in EXCLUDE_KEYWORDS):
+        return False
+        
+    # 2. Zorunlu akaryakıt kelimelerinden en az biri olmalı
+    return any(keyword in text for keyword in PURE_FUEL_KEYWORDS)
 
 def fetch_and_store_news():
     print("🧹 Eski haberler temizleniyor...")
-    # id sütunu bigint olduğu için sayısal 0 kontrolü yapıyoruz:
     supabase.table("news").delete().neq("id", 0).execute()
 
-    print("🔍 TRT, AA ve diğer geniş kaynaklardan akaryakıt haberleri çekiliyor...")
+    print("🔍 Saf akaryakıt haberleri taranıyor...")
     news_list = []
     seen_titles = set()
 
@@ -54,11 +65,13 @@ def fetch_and_store_news():
                 summary = clean_html(entry.get("summary", entry.get("description", "")))
                 link = entry.get("link", "")
 
-                if title in seen_titles:
+                # Mükerrer Kontrolü (Başlığın ilk 20 harfi bazında benzeşme tespiti)
+                short_title = re.sub(r'[^a-zA-Z0-9ğüşıöçĞÜŞİÖÇ]', '', title[:20].lower())
+                if short_title in seen_titles:
                     continue
 
-                if is_fuel_news(title, summary):
-                    seen_titles.add(title)
+                if is_pure_fuel_news(title, summary):
+                    seen_titles.add(short_title)
                     news_list.append({
                         "title": title,
                         "content": summary[:250] + "..." if len(summary) > 250 else summary,
@@ -68,11 +81,10 @@ def fetch_and_store_news():
             print(f"Hata oluşan kaynak ({feed_url}): {e}")
 
     if news_list:
-        # En güncel 15 haberi alıp veritabanına ekleyelim
-        supabase.table("news").insert(news_list[:15]).execute()
-        print(f"✨ Toplam {len(news_list[:15])} adet güncel akaryakıt haberi eklendi.")
+        supabase.table("news").insert(news_list[:10]).execute()
+        print(f"✨ Toplam {len(news_list[:10])} adet GERÇEK akaryakıt haberi eklendi.")
     else:
-        print("Gerekli kriterlere uygun yeni haber bulunamadı.")
+        print("Kriterlere uygun yeni akaryakıt haberi bulunamadı.")
 
 if __name__ == "__main__":
     fetch_and_store_news()
