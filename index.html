@@ -75,18 +75,25 @@
 
         .card { background: white; border-radius: 14px; padding: 16px; margin-bottom: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-left: 5px solid #2563eb; cursor: pointer; transition: transform 0.1s ease, box-shadow 0.1s ease; }
         .card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        .station-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+        .station-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
         .station-title { font-size: 17px; font-weight: bold; color: #0f172a; }
-        .station-address { font-size: 12px; color: #64748b; margin-bottom: 10px; }
+        .station-address { font-size: 12px; color: #64748b; margin-bottom: 8px; }
+        
+        .station-rating-badge { display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: bold; color: #d97706; background: #fef3c7; padding: 3px 8px; border-radius: 6px; margin-bottom: 8px; width: fit-content; }
+        
         .distance-badge { background: #e0f2fe; color: #0369a1; padding: 5px 10px; border-radius: 8px; font-size: 12px; font-weight: bold; }
         
-        .prices { display: flex; justify-content: space-between; background: #f8fafc; padding: 10px; border-radius: 10px; margin-top: 10px; font-size: 13px; text-align: center; gap: 10px; }
+        .prices { display: flex; justify-content: space-between; background: #f8fafc; padding: 10px; border-radius: 10px; margin-top: 8px; font-size: 13px; text-align: center; gap: 10px; }
         .price-item { flex: 1; }
         .price-label { color: #64748b; font-size: 11px; margin-bottom: 3px; text-transform: uppercase; font-weight: bold; }
         .price-val { font-weight: bold; color: #dc2626; font-size: 14px; }
 
-        .report-btn { background: #f1f5f9; border: 1px solid #cbd5e1; color: #475569; padding: 8px 10px; border-radius: 8px; font-size: 12px; cursor: pointer; font-weight: bold; margin-top: 10px; width: 100%; transition: background 0.2s; }
+        .card-buttons { display: flex; gap: 8px; margin-top: 10px; }
+        .report-btn { background: #f1f5f9; border: 1px solid #cbd5e1; color: #475569; padding: 8px 10px; border-radius: 8px; font-size: 12px; cursor: pointer; font-weight: bold; flex: 1; transition: background 0.2s; }
         .report-btn:hover { background: #e2e8f0; }
+        
+        .rate-action-btn { background: #fef3c7; border: 1px solid #fcd34d; color: #b45309; padding: 8px 10px; border-radius: 8px; font-size: 12px; cursor: pointer; font-weight: bold; flex: 1; transition: background 0.2s; }
+        .rate-action-btn:hover { background: #fde68a; }
 
         .route-btn-container { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
         .route-btn { width: 100%; padding: 10px; background: #0f172a; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 12px; cursor: pointer; text-decoration: none; text-align: center; display: block; }
@@ -108,6 +115,13 @@
         .modal-body { font-size: 13px; color: #334155; line-height: 1.6; max-height: 65vh; overflow-y: auto; }
         .modal-body h4 { color: #0f172a; margin-top: 12px; margin-bottom: 4px; font-size: 13px; }
         
+        /* Star Rating Styles */
+        .star-rating-container { display: flex; justify-content: center; gap: 8px; font-size: 32px; cursor: pointer; margin: 12px 0; color: #cbd5e1; }
+        .star-rating-container .star.active { color: #f59e0b; }
+        .rating-slider-group { background: #f8fafc; padding: 10px; border-radius: 10px; margin-bottom: 12px; }
+        .rating-slider-group label { display: flex; justify-content: space-between; font-size: 12px; font-weight: bold; color: #475569; margin-bottom: 4px; }
+        .rating-slider-group input[type=range] { width: 100%; accent-color: #2563eb; }
+
         .news-item-card {
             background: #f8fafc;
             border: 1px solid #e2e8f0;
@@ -201,7 +215,7 @@
         </div>
     </div>
 
-    <!-- HABER DETAY MODALI (UYGULAMA İÇİNDE OKUMA) -->
+    <!-- HABER DETAY MODALI -->
     <div id="newsDetailModal" class="modal-overlay" onclick="handleNewsDetailOutsideClick(event)">
         <div class="modal-box">
             <div class="modal-header">
@@ -213,7 +227,7 @@
                 <div id="detailModalContent" style="font-size: 13px; color: #334155; line-height: 1.6; margin-bottom: 16px;"></div>
                 
                 <a id="detailModalLink" href="#" target="_blank" class="route-btn" style="text-align:center; text-decoration:none; display:block; background:#2563eb; margin-bottom: 8px;">🌐 Orijinal Kaynaktan Tamamını Oku</a>
-                <button class="report-btn" onclick="backToNewsList()" style="background:#f1f5f9; border:1px solid #cbd5e1; color:#475569;">⬅ Haber Listesine Dön</button>
+                <button class="report-btn" onclick="backToNewsList()" style="background:#f1f5f9; border:1px solid #cbd5e1; color:#475569; width:100%;">⬅ Haber Listesine Dön</button>
             </div>
         </div>
     </div>
@@ -291,10 +305,54 @@
         </div>
     </div>
 
+    <!-- İSTASYON PUANLAMA MODALI -->
+    <div id="ratingModal" class="modal-overlay" onclick="handleRatingOutsideClick(event)">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3 id="ratingModalTitle">⭐ İstasyonu Puanla</h3>
+                <button class="close-btn" onclick="closeRatingModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="ratingStationId">
+                <p style="margin-top:0; font-weight:bold; color:#0f172a; text-align:center;" id="ratingStationName"></p>
+                
+                <!-- Yıldız Puanlama -->
+                <div class="star-rating-container" id="starContainer">
+                    <span class="star" data-value="1" onclick="setStarRating(1)">&#9733;</span>
+                    <span class="star" data-value="2" onclick="setStarRating(2)">&#9733;</span>
+                    <span class="star" data-value="3" onclick="setStarRating(3)">&#9733;</span>
+                    <span class="star" data-value="4" onclick="setStarRating(4)">&#9733;</span>
+                    <span class="star" data-value="5" onclick="setStarRating(5)">&#9733;</span>
+                </div>
+                <div style="text-align:center; font-size:13px; font-weight:bold; color:#f59e0b; margin-bottom:12px;" id="starText">Çok İyi (5 / 5)</div>
+
+                <!-- Temizlik Slider -->
+                <div class="rating-slider-group">
+                    <label><span>🧼 Tuvalet & Temizlik</span> <span id="cleanlinessValLabel">5/5</span></label>
+                    <input type="range" id="cleanlinessInput" min="1" max="5" value="5" oninput="document.getElementById('cleanlinessValLabel').textContent = this.value + '/5'">
+                </div>
+
+                <!-- Hizmet Kalitesi Slider -->
+                <div class="rating-slider-group">
+                    <label><span>👨‍🔧 Personel & Hizmet</span> <span id="serviceValLabel">5/5</span></label>
+                    <input type="range" id="serviceInput" min="1" max="5" value="5" oninput="document.getElementById('serviceValLabel').textContent = this.value + '/5'">
+                </div>
+
+                <!-- Yorum Alanı -->
+                <div style="margin-bottom: 12px;">
+                    <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:4px;">Yorumunuz (Opsiyonel):</label>
+                    <textarea id="ratingComment" class="search-box" rows="2" placeholder="İstasyon deneyiminizi yazın..." style="resize:none;"></textarea>
+                </div>
+
+                <button class="btn" id="submitRatingBtn" style="width:100%; margin-top:5px;" onclick="submitRating()">Puanı Gönder</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     
-    <!-- Firebase SDK'ları (Compat Sürümü) -->
+    <!-- Firebase SDK'ları -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js"></script>
 
@@ -346,10 +404,13 @@
         let userMarker = null;
         let stationMarkers = [];
         let rawStations = [];
+        let stationRatingsMap = {}; // İstasyon puan özetleri için sözlük
         let fetchedNewsList = [];
         let userLat = 38.7569;
         let userLng = 30.5387;
         let currentSort = 'distance';
+
+        let currentSelectedRating = 5;
 
         const redIcon = L.divIcon({
             className: 'custom-red-pin',
@@ -368,6 +429,16 @@
             initApp();
             setTimeout(requestNotificationPermission, 2000);
         };
+
+        // Cihaz için Benzersiz ID (Mükerrer oylamayı engellemek için)
+        function getDeviceId() {
+            let deviceId = localStorage.getItem('app_device_id');
+            if (!deviceId) {
+                deviceId = 'dev_' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
+                localStorage.setItem('app_device_id', deviceId);
+            }
+            return deviceId;
+        }
 
         async function loadNews() {
             try {
@@ -419,7 +490,6 @@
             });
         }
 
-        // Tıklanan haberi indis numarası üzerinden güvenle açan fonksiyon
         function openNewsDetailByIndex(index) {
             const news = fetchedNewsList[index];
             if (!news) return;
@@ -442,18 +512,9 @@
             document.getElementById('newsDetailModal').classList.add('open');
         }
 
-        function closeNewsDetailModal() {
-            document.getElementById('newsDetailModal').classList.remove('open');
-        }
-
-        function handleNewsDetailOutsideClick(event) {
-            if (event.target.id === 'newsDetailModal') closeNewsDetailModal();
-        }
-
-        function backToNewsList() {
-            closeNewsDetailModal();
-            openNewsModal();
-        }
+        function closeNewsDetailModal() { document.getElementById('newsDetailModal').classList.remove('open'); }
+        function handleNewsDetailOutsideClick(event) { if (event.target.id === 'newsDetailModal') closeNewsDetailModal(); }
+        function backToNewsList() { closeNewsDetailModal(); openNewsModal(); }
 
         function openNewsModal() { document.getElementById('newsListModal').classList.add('open'); }
         function closeNewsModal() { document.getElementById('newsListModal').classList.remove('open'); }
@@ -463,6 +524,7 @@
         function closeModal() { document.getElementById('legalModal').classList.remove('open'); }
         function handleOutsideClick(event) { if (event.target.id === 'legalModal') closeModal(); }
 
+        // Fiyat Bildir Modal İşlemleri
         function openReportModal(stationId, stationName, benzin, motorin, lpg) {
             document.getElementById('reportStationId').value = stationId;
             document.getElementById('reportStationName').textContent = stationName;
@@ -474,9 +536,77 @@
             document.getElementById('legalConsent').checked = false;
             document.getElementById('reportModal').classList.add('open');
         }
-
         function closeReportModal() { document.getElementById('reportModal').classList.remove('open'); }
         function handleReportOutsideClick(event) { if (event.target.id === 'reportModal') closeReportModal(); }
+
+        // Puanlama Modal İşlemleri
+        function openRatingModal(stationId, stationName) {
+            document.getElementById('ratingStationId').value = stationId;
+            document.getElementById('ratingStationName').textContent = stationName;
+            setStarRating(5);
+            document.getElementById('cleanlinessInput').value = 5;
+            document.getElementById('cleanlinessValLabel').textContent = '5/5';
+            document.getElementById('serviceInput').value = 5;
+            document.getElementById('serviceValLabel').textContent = '5/5';
+            document.getElementById('ratingComment').value = '';
+            document.getElementById('ratingModal').classList.add('open');
+        }
+        function closeRatingModal() { document.getElementById('ratingModal').classList.remove('open'); }
+        function handleRatingOutsideClick(event) { if (event.target.id === 'ratingModal') closeRatingModal(); }
+
+        function setStarRating(val) {
+            currentSelectedRating = val;
+            const stars = document.querySelectorAll('#starContainer .star');
+            stars.forEach((star, idx) => {
+                if (idx < val) star.classList.add('active');
+                else star.classList.remove('active');
+            });
+            const texts = ["", "Çok Zayıf (1 / 5)", "Zayıf (2 / 5)", "Orta (3 / 5)", "İyi (4 / 5)", "Çok İyi (5 / 5)"];
+            document.getElementById('starText').textContent = texts[val];
+        }
+
+        async function submitRating() {
+            const submitBtn = document.getElementById('submitRatingBtn');
+            const stationId = document.getElementById('ratingStationId').value;
+            const cleanliness = parseInt(document.getElementById('cleanlinessInput').value);
+            const service = parseInt(document.getElementById('serviceInput').value);
+            const comment = document.getElementById('ratingComment').value.trim();
+            const deviceId = getDeviceId();
+
+            if (!stationId) return;
+
+            try {
+                submitBtn.disabled = true;
+                submitBtn.textContent = "Kaydediliyor...";
+
+                const { error } = await _supabase.from('station_ratings').insert([{
+                    station_id: parseInt(stationId),
+                    user_device_id: deviceId,
+                    rating: currentSelectedRating,
+                    cleanliness_rating: cleanliness,
+                    service_rating: service,
+                    comment: comment
+                }]);
+
+                if (error) {
+                    if (error.code === '23505') {
+                        alert("Bu istasyon için daha önce değerlendirme yaptınız.");
+                    } else {
+                        throw error;
+                    }
+                } else {
+                    alert("Değerlendirmeniz için teşekkür ederiz! ⭐");
+                    closeRatingModal();
+                    loadData(); // Puanları güncellemek için verileri yeniden çek
+                }
+            } catch (err) {
+                console.error("Puan kaydetme hatası:", err);
+                alert("Puan kaydedilirken bir hata oluştu.");
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = "Puanı Gönder";
+            }
+        }
 
         async function submitReport() {
             const submitBtn = document.getElementById('submitReportBtn');
@@ -575,14 +705,28 @@
         async function loadData() {
             const list = document.getElementById('list');
             list.innerHTML = '<div style="text-align:center; padding: 20px;">Veriler yükleniyor...</div>';
-            const { data, error } = await _supabase.from('gas_stations').select('*');
+            
+            // İstasyonları ve Puan Özetlerini Paralel Çek
+            const [stationsRes, ratingsRes] = await Promise.all([
+                _supabase.from('gas_stations').select('*'),
+                _supabase.from('station_rating_summary').select('*')
+            ]);
 
-            if (error) {
+            if (stationsRes.error) {
                 list.innerHTML = '<div class="card">Veriler yüklenirken bir hata oluştu.</div>';
                 return;
             }
 
-            rawStations = data || [];
+            rawStations = stationsRes.data || [];
+            
+            // Puan özetlerini haritalandır (ID bazlı hızlı erişim için)
+            stationRatingsMap = {};
+            if (ratingsRes.data) {
+                ratingsRes.data.forEach(r => {
+                    stationRatingsMap[r.station_id] = r;
+                });
+            }
+
             filterAndRender();
         }
 
@@ -620,7 +764,13 @@
             let stations = rawStations.map(st => {
                 const stLat = parseFloat(st.latitude) || 0;
                 const stLng = parseFloat(st.longitude) || 0;
-                return { ...st, calculatedDistance: calculateDistance(userLat, userLng, stLat, stLng) };
+                const ratingObj = stationRatingsMap[st.id] || { avg_rating: 0, total_reviews: 0 };
+                return { 
+                    ...st, 
+                    calculatedDistance: calculateDistance(userLat, userLng, stLat, stLng),
+                    avgRating: ratingObj.avg_rating || 0,
+                    totalReviews: ratingObj.total_reviews || 0
+                };
             });
 
             if (searchVal.trim() !== '') {
@@ -653,6 +803,11 @@
                 const motorinVal = st.motorin_price ? `${st.motorin_price} ₺` : '-';
                 const lpgVal = st.lpg_price ? `${st.lpg_price} ₺` : '-';
 
+                // Puan rozeti metni
+                const ratingBadgeHtml = st.totalReviews > 0 
+                    ? `<div class="station-rating-badge">⭐ ${st.avg_rating} <span style="font-weight:normal; color:#78350f;">(${st.totalReviews} değerlendirme)</span></div>`
+                    : `<div class="station-rating-badge" style="color:#64748b; background:#f1f5f9;">⭐ Henüz puanlanmadı</div>`;
+
                 const stLat = parseFloat(st.latitude);
                 const stLng = parseFloat(st.longitude);
                 const geoUrl = `geo:${stLat},${stLng}?q=${stLat},${stLng}(${encodeURIComponent(brandName)})`;
@@ -683,14 +838,20 @@
                             <div class="distance-badge">📍 ${distText}</div>
                         </div>
                         <div class="station-address">📍 ${st.address || ''}</div>
+                        ${ratingBadgeHtml}
                         <div class="prices">
                             <div class="price-item"><div class="price-label">Benzin</div><div class="price-val">${benzinVal}</div></div>
                             <div class="price-item"><div class="price-label">Motorin</div><div class="price-val">${motorinVal}</div></div>
                             <div class="price-item"><div class="price-label">LPG</div><div class="price-val">${lpgVal}</div></div>
                         </div>
-                        <button class="report-btn" onclick="event.stopPropagation(); openReportModal('${st.id || ''}', '${brandName}', '${st.benzin_price || '-'}', '${st.motorin_price || '-'}', '${st.lpg_price || '-'}')">
-                            📝 Fiyat / Bilgi Bildir
-                        </button>
+                        <div class="card-buttons">
+                            <button class="rate-action-btn" onclick="event.stopPropagation(); openRatingModal('${st.id}', '${brandName.replace(/'/g, "\\'")}')">
+                                ⭐ Puan Ver
+                            </button>
+                            <button class="report-btn" onclick="event.stopPropagation(); openReportModal('${st.id || ''}', '${brandName.replace(/'/g, "\\'")}', '${st.benzin_price || '-'}', '${st.motorin_price || '-'}', '${st.lpg_price || '-'}')">
+                                📝 Fiyat Bildir
+                            </button>
+                        </div>
                     </div>
                 `;
             });
