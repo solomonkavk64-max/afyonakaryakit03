@@ -13,26 +13,31 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# Google News Ulusal Arama RSS'leri + Ulusal Ekonomi Kaynakları
+# Google News Olmayan, Tam 15 Adet Güvenilir Ulusal Ekonomi ve Enerji Kaynağı
 RSS_FEEDS = [
-    "https://news.google.com/rss/search?q=akaryakıt+OR+benzin+OR+motorin+OR+lpg&hl=tr&gl=TR&ceid=TR:tr",
+    "https://www.enerjigunlugu.net/feed",
     "https://www.trthaber.com/ekonomi_articles.rss",
     "https://www.aa.com.tr/tr/rss/default?cat=ekonomi",
     "https://www.ntv.com.tr/ekonomi.rss",
     "https://www.haberturk.com/rss/kategori/ekonomi.xml",
     "https://www.bloomberght.com/rss",
     "https://www.dunya.com/rss?kategori=ekonomi",
+    "https://www.hurriyet.com.tr/rss/ekonomi",
+    "https://www.milliyet.com.tr/rss/rssnew/ekonomiresimli.xml",
+    "https://www.sabah.com.tr/rss/ekonomi.xml",
     "https://www.sozcu.com.tr/kategori/ekonomi/feed",
     "https://www.ensonhaber.com/rss/ekonomi.xml",
-    "https://www.enerjigunlugu.net/feed"
+    "https://www.karar.com/rss/ekonomi",
+    "https://www.star.com.tr/rss/rss.asp?kategori=ekonomi",
+    "https://www.aksam.com.tr/rss/ekonomi.xml"
 ]
 
 # BAŞLIKTA OLMAK ZORUNDA OLAN SAF AKARYAKIT KELİMELERİ
 MUST_HAVE_IN_TITLE = [
-    "akaryakıt", "benzin", "motorin", "mazot", "lpg", "otogaz", "brent"
+    "akaryakıt", "benzin", "motorin", "mazot", "lpg", "otogaz", "brent petrol", "brent"
 ]
 
-# YEREL VE ALAKASIZ KELİME ENGELİ
+# YEREL VE ALAKASIZ KELİME / ŞEHİR ENGELİ
 EXCLUDE_KEYWORDS = [
     "kpss", "sınav", "kaçakçılık", "alkol", "tütün", "sigara", "enflasyon", 
     "faiz", "borsa", "hisse", "palamut", "balık", "facebook", "trump", "grönland",
@@ -55,7 +60,7 @@ def is_valid_fuel_news(title, entry_date):
     if not any(kw in title_lower for kw in MUST_HAVE_IN_TITLE):
         return False
         
-    # 3. Tarih Kontrolü (Son 2 güne / 48 saate ait haberler)
+    # 3. Tarih Kontrolü (Son 48 saat / 2 gün)
     if entry_date:
         now = datetime.now(timezone.utc)
         if entry_date < (now - timedelta(days=2)):
@@ -67,7 +72,7 @@ def fetch_and_store_news():
     print("🧹 Eski haberler temizleniyor...")
     supabase.table("news").delete().neq("id", 0).execute()
 
-    print("🔍 Güncel ulusal akaryakıt haberleri toplanıyor...")
+    print("🔍 15 ulusal ekonomi ve enerji kaynağından saf akaryakıt haberleri taranıyor...")
     news_list = []
     seen_titles = set()
 
@@ -85,7 +90,7 @@ def fetch_and_store_news():
                     import time
                     entry_date = datetime.fromtimestamp(time.mktime(published_parsed), timezone.utc)
 
-                # Mükerrer kontrolü
+                # Mükerrer başlık kontrolü
                 short_title = re.sub(r'[^a-zA-Z0-9ğüşıöçĞÜŞİÖÇ]', '', title[:20].lower())
                 if short_title in seen_titles:
                     continue
@@ -102,9 +107,9 @@ def fetch_and_store_news():
 
     if news_list:
         supabase.table("news").insert(news_list[:15]).execute()
-        print(f"✨ Toplam {len(news_list[:15])} adet taze akaryakıt haberi eklendi.")
+        print(f"✨ Toplam {len(news_list[:15])} adet ulusal akaryakıt haberi eklendi.")
     else:
-        print("Kriterlere uygun haber bulunamadı.")
+        print("Kriterlere uygun yeni haber bulunamadı.")
 
 if __name__ == "__main__":
     fetch_and_store_news()
