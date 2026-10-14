@@ -803,11 +803,13 @@
                 const motorinVal = st.motorin_price ? `${st.motorin_price} ₺` : '-';
                 const lpgVal = st.lpg_price ? `${st.lpg_price} ₺` : '-';
 
-                // Puan rozeti metni
-                const ratingBadgeHtml = st.totalReviews > 0 
-                    ? `<div class="station-rating-badge">⭐ ${st.avg_rating} <span style="font-weight:normal; color:#78350f;">(${st.totalReviews} değerlendirme)</span></div>`
-                    : `<div class="station-rating-badge" style="color:#64748b; background:#f1f5f9;">⭐ Henüz puanlanmadı</div>`;
-
+                // Puan rozeti metni (Düzeltildi)
+const ratingVal = st.avgRating ? parseFloat(st.avgRating).toFixed(1) : '0.0';
+const ratingBadgeHtml = st.totalReviews > 0 
+    ? `<div class="station-rating-badge" onclick="event.stopPropagation(); openCommentsModal('${st.id}', '${brandName.replace(/'/g, "\\'")}')" style="cursor:pointer;">
+        ⭐ ${ratingVal} <span style="font-weight:normal; color:#78350f;">(${st.totalReviews} değerlendirme - Detaylar)</span>
+       </div>`
+    : `<div class="station-rating-badge" style="color:#64748b; background:#f1f5f9;">⭐ Henüz puanlanmadı</div>`;
                 const stLat = parseFloat(st.latitude);
                 const stLng = parseFloat(st.longitude);
                 const geoUrl = `geo:${stLat},${stLng}?q=${stLat},${stLng}(${encodeURIComponent(brandName)})`;
