@@ -13,7 +13,7 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# Geniş ve Zengin Haber Kaynakları (Google News Aramaları + Tüm Büyük Ajans ve Gazeteler)
+# 15 Geniş ve Zengin Haber Kaynağı
 RSS_FEEDS = [
     "https://news.google.com/rss/search?q=akaryakıt+zam+indirim&hl=tr&gl=TR&ceid=TR:tr",
     "https://news.google.com/rss/search?q=benzin+motorin+fiyatı&hl=tr&gl=TR&ceid=TR:tr",
@@ -58,10 +58,10 @@ def is_strictly_fuel_news(title, entry_date):
     if not any(kw in title_lower for kw in MUST_HAVE_IN_TITLE):
         return False
         
-    # 3. Tarih Kontrolü (Son 5 güne ait haberler)
+    # 3. Günlük Tarih Kontrolü (Sadece son 24 saatteki haberleri alır)
     if entry_date:
         now = datetime.now(timezone.utc)
-        if entry_date < (now - timedelta(days=5)):
+        if entry_date < (now - timedelta(days=1)):
             return False
             
     return True
@@ -70,7 +70,7 @@ def fetch_and_store_news():
     print("🧹 Eski haberler temizleniyor...")
     supabase.table("news").delete().neq("id", 0).execute()
 
-    print("🔍 Tüm zengin kaynaklar taranarak saf akaryakıt haberleri toplanıyor...")
+    print("🔍 Son 24 saatlik güncel ve saf akaryakıt haberleri toplanıyor...")
     news_list = []
     seen_titles = set()
 
@@ -105,9 +105,9 @@ def fetch_and_store_news():
 
     if news_list:
         supabase.table("news").insert(news_list[:15]).execute()
-        print(f"✨ Toplam {len(news_list[:15])} adet zenginleştirilmiş saf akaryakıt haberi eklendi.")
+        print(f"✨ Toplam {len(news_list[:15])} adet SON 24 SAATE AİT güncel akaryakıt haberi eklendi.")
     else:
-        print("Kriterlere uygun yeni haber bulunamadı.")
+        print("Son 24 saatte kriterlere uygun yeni haber bulunamadı.")
 
 if __name__ == "__main__":
     fetch_and_store_news()
