@@ -115,7 +115,7 @@
         .modal-body { font-size: 13px; color: #334155; line-height: 1.6; max-height: 65vh; overflow-y: auto; }
         .modal-body h4 { color: #0f172a; margin-top: 12px; margin-bottom: 4px; font-size: 13px; }
         
-        .star-rating-container { display: flex; justify-content: center; gap: 8px; font-size: 32px; cursor: pointer; margin: 12px 0; color: #cbd5e1; }
+        .star-rating-container { display: flex; justify-content: center; gap: 8px; font-size: 32px; margin: 12px 0; color: #cbd5e1; pointer-events: none; }
         .star-rating-container .star.active { color: #f59e0b; }
         .rating-slider-group { background: #f8fafc; padding: 10px; border-radius: 10px; margin-bottom: 12px; }
         .rating-slider-group label { display: flex; justify-content: space-between; font-size: 12px; font-weight: bold; color: #475569; margin-bottom: 4px; }
@@ -315,26 +315,26 @@
                 <input type="hidden" id="ratingStationId">
                 <p style="margin-top:0; font-weight:bold; color:#0f172a; text-align:center;" id="ratingStationName"></p>
                 
-                <!-- Yıldız Puanlama -->
+                <!-- Otomatik Güncellenen Yıldız Göstergesi -->
                 <div class="star-rating-container" id="starContainer">
-                    <span class="star" data-value="1" onclick="setStarRating(1)">&#9733;</span>
-                    <span class="star" data-value="2" onclick="setStarRating(2)">&#9733;</span>
-                    <span class="star" data-value="3" onclick="setStarRating(3)">&#9733;</span>
-                    <span class="star" data-value="4" onclick="setStarRating(4)">&#9733;</span>
-                    <span class="star" data-value="5" onclick="setStarRating(5)">&#9733;</span>
+                    <span class="star" data-value="1">&#9733;</span>
+                    <span class="star" data-value="2">&#9733;</span>
+                    <span class="star" data-value="3">&#9733;</span>
+                    <span class="star" data-value="4">&#9733;</span>
+                    <span class="star" data-value="5">&#9733;</span>
                 </div>
                 <div style="text-align:center; font-size:13px; font-weight:bold; color:#f59e0b; margin-bottom:12px;" id="starText">Çok İyi (5 / 5)</div>
 
                 <!-- Temizlik Slider -->
                 <div class="rating-slider-group">
                     <label><span>🧼 Tuvalet & Temizlik</span> <span id="cleanlinessValLabel">5/5</span></label>
-                    <input type="range" id="cleanlinessInput" min="1" max="5" value="5" oninput="document.getElementById('cleanlinessValLabel').textContent = this.value + '/5'">
+                    <input type="range" id="cleanlinessInput" min="1" max="5" value="5" oninput="updateRatingFromSliders()">
                 </div>
 
                 <!-- Hizmet Kalitesi Slider -->
                 <div class="rating-slider-group">
                     <label><span>👨‍🔧 Personel & Hizmet</span> <span id="serviceValLabel">5/5</span></label>
-                    <input type="range" id="serviceInput" min="1" max="5" value="5" oninput="document.getElementById('serviceValLabel').textContent = this.value + '/5'">
+                    <input type="range" id="serviceInput" min="1" max="5" value="5" oninput="updateRatingFromSliders()">
                 </div>
 
                 <!-- Yorum Alanı -->
@@ -555,16 +555,35 @@
         function openRatingModal(stationId, stationName) {
             document.getElementById('ratingStationId').value = stationId;
             document.getElementById('ratingStationName').textContent = stationName;
-            setStarRating(5);
             document.getElementById('cleanlinessInput').value = 5;
-            document.getElementById('cleanlinessValLabel').textContent = '5/5';
             document.getElementById('serviceInput').value = 5;
-            document.getElementById('serviceValLabel').textContent = '5/5';
+            updateRatingFromSliders();
             document.getElementById('ratingComment').value = '';
             document.getElementById('ratingModal').classList.add('open');
         }
         function closeRatingModal() { document.getElementById('ratingModal').classList.remove('open'); }
         function handleRatingOutsideClick(event) { if (event.target.id === 'ratingModal') closeRatingModal(); }
+
+        function updateRatingFromSliders() {
+            const cleanliness = parseInt(document.getElementById('cleanlinessInput').value);
+            const service = parseInt(document.getElementById('serviceInput').value);
+            
+            document.getElementById('cleanlinessValLabel').textContent = cleanliness + '/5';
+            document.getElementById('serviceValLabel').textContent = service + '/5';
+
+            // Ortalama puana göre yıldızları otomatik güncelle
+            const avg = Math.round((cleanliness + service) / 2);
+            currentSelectedRating = avg;
+
+            const stars = document.querySelectorAll('#starContainer .star');
+            stars.forEach((star, idx) => {
+                if (idx < avg) star.classList.add('active');
+                else star.classList.remove('active');
+            });
+
+            const texts = ["", "Çok Zayıf (1 / 5)", "Zayıf (2 / 5)", "Orta (3 / 5)", "İyi (4 / 5)", "Çok İyi (5 / 5)"];
+            document.getElementById('starText').textContent = texts[avg] || (avg + " / 5");
+        }
 
         async function openCommentsModal(stationId, stationName) {
             document.getElementById('commentsStationName').textContent = stationName;
@@ -612,17 +631,6 @@
         }
         function closeCommentsModal() { document.getElementById('commentsModal').classList.remove('open'); }
         function handleCommentsOutsideClick(event) { if (event.target.id === 'commentsModal') closeCommentsModal(); }
-
-        function setStarRating(val) {
-            currentSelectedRating = val;
-            const stars = document.querySelectorAll('#starContainer .star');
-            stars.forEach((star, idx) => {
-                if (idx < val) star.classList.add('active');
-                else star.classList.remove('active');
-            });
-            const texts = ["", "Çok Zayıf (1 / 5)", "Zayıf (2 / 5)", "Orta (3 / 5)", "İyi (4 / 5)", "Çok İyi (5 / 5)"];
-            document.getElementById('starText').textContent = texts[val];
-        }
 
         async function submitRating() {
             const submitBtn = document.getElementById('submitRatingBtn');
@@ -860,7 +868,6 @@
                 const motorinVal = st.motorin_price ? `${st.motorin_price} ₺` : '-';
                 const lpgVal = st.lpg_price ? `${st.lpg_price} ₺` : '-';
 
-                // Puan rozeti metni (Düzeltildi)
                 const ratingVal = st.avgRating ? parseFloat(st.avgRating).toFixed(1) : '0.0';
                 const ratingBadgeHtml = st.totalReviews > 0 
                     ? `<div class="station-rating-badge" onclick="event.stopPropagation(); openCommentsModal('${st.id}', '${brandName.replace(/'/g, "\\'")}')" style="cursor:pointer;">
