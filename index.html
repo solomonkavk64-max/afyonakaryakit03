@@ -422,6 +422,7 @@
         let stationMarkers = [];
         let rawStations = [];
         let stationRatingsMap = {};
+        let userRatingsMap = {}; // Sunucudan gelen kullanıcı oyları
         let fetchedNewsList = [];
         let userLat = 38.7569;
         let userLng = 30.5387;
@@ -447,27 +448,60 @@
             setTimeout(requestNotificationPermission, 2000);
         };
 
+        // Çerez (Cookie) Yardımcı Fonksiyonları
+        function setCookie(name, value, days) {
+            let expires = "";
+            if (days) {
+                let date = new Date();
+                date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+                expires = "; expires=" + date.toUTCString();
+            }
+            document.cookie = name + "=" + (value || "") + expires + "; path=/";
+        }
+
+        function getCookie(name) {
+            let nameEQ = name + "=";
+            let ca = document.cookie.split(';');
+            for (let i = 0; i < ca.length; i++) {
+                let c = ca[i];
+                while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+                if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+            }
+            return null;
+        }
+
+        // Kalıcı Cihaz Kimliği (LocalStorage + Cookie Destekli)
         function getDeviceId() {
-            let deviceId = localStorage.getItem('app_device_id');
+            let deviceId = null;
+            try { deviceId = localStorage.getItem('app_device_id'); } catch (e) {}
+            if (!deviceId) deviceId = getCookie('app_device_id');
             if (!deviceId) {
                 deviceId = 'dev_' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
-                localStorage.setItem('app_device_id', deviceId);
             }
+            try { localStorage.setItem('app_device_id', deviceId); } catch (e) {}
+            setCookie('app_device_id', deviceId, 3650); // 10 yıl kalıcı çerez
             return deviceId;
         }
 
-        // Kullanıcının daha önce oy verdiği istasyonları takip için
+        // Oylanan İstasyonları Takip (LocalStorage + Cookie Destekli)
         function getRatedStations() {
             try {
-                return JSON.parse(localStorage.getItem('rated_stations') || '[]');
+                let rated = JSON.parse(localStorage.getItem('rated_stations') || '[]');
+                if (rated.length === 0) {
+                    let cookieRated = getCookie('rated_stations');
+                    if (cookieRated) rated = JSON.parse(cookieRated);
+                }
+                return rated.map(id => String(id));
             } catch(e) { return []; }
         }
 
         function markStationAsRated(stationId) {
             let rated = getRatedStations();
-            if (!rated.includes(stationId)) {
-                rated.push(stationId);
-                localStorage.setItem('rated_stations', JSON.stringify(rated));
+            const stIdStr = String(stationId);
+            if (!rated.includes(stIdStr)) {
+                rated.push(stIdStr);
+                try { localStorage.setItem('rated_stations', JSON.stringify(rated)); } catch(e) {}
+                setCookie('rated_stations', JSON.stringify(rated), 3650);
             }
         }
 
@@ -673,7 +707,7 @@
                 if (error) {
                     if (error.code === '23505') {
                         alert("Bu istasyon için daha önce değerlendirme yaptınız.");
-                        markStationAsRated(stationId); // Yerel hafızayı senkronize et
+                        markStationAsRated(stationId); 
                         closeRatingModal();
                         loadData();
                     } else {
@@ -681,7 +715,7 @@
                     }
                 } else {
                     alert("Değerlendirmeniz için teşekkür ederiz! ⭐");
-                    markStationAsRated(stationId); // Oy verildiğini kaydet
+                    markStationAsRated(stationId); 
                     closeRatingModal();
                     loadData();
                 }
@@ -792,9 +826,13 @@
             const list = document.getElementById('list');
             list.innerHTML = '<div style="text-align:center; padding: 20px;">Veriler yükleniyor...</div>';
             
-            const [stationsRes, ratingsRes] = await Promise.all([
+            const deviceId = getDeviceId();
+
+            // İstasyonları, özetleri ve kullanıcının daha önceki oylarını paralel olarak çek
+            const [stationsRes, ratingsRes, myRatingsRes] = await Promise.all([
                 _supabase.from('gas_stations').select('*'),
-                _supabase.from('station_rating_summary').select('*')
+                _supabase.from('station_rating_summary').select('*'),
+                _supabase.from('station_ratings').select('station_id').eq('user_device_id', deviceId)
             ]);
 
             if (stationsRes.error) {
@@ -808,6 +846,14 @@
             if (ratingsRes.data) {
                 ratingsRes.data.forEach(r => {
                     stationRatingsMap[r.station_id] = r;
+                });
+            }
+
+            userRatingsMap = {};
+            if (myRatingsRes.data) {
+                myRatingsRes.data.forEach(r => {
+                    userRatingsMap[String(r.station_id)] = true;
+                    markStationAsRated(r.station_id);
                 });
             }
 
@@ -896,8 +942,9 @@
                        </div>`
                     : `<div class="station-rating-badge" style="color:#64748b; background:#f1f5f9;">⭐ Henüz puanlanmadı</div>`;
 
-                // Kullanıcının bu istasyonu daha önce oylayıp oylamadığını kontrol et
-                const hasRated = ratedStationsList.includes(st.id);
+                // Kullanıcının daha önce oy verip vermediğini sunucu ve yerel cookie/storage üzerinden denetle
+                const stIdStr = String(st.id);
+                const hasRated = userRatingsMap[stIdStr] || ratedStationsList.includes(stIdStr);
                 const rateButtonHtml = hasRated
                     ? `<div class="rated-badge-btn">✅ Puan Verildi</div>`
                     : `<button class="rate-action-btn" onclick="event.stopPropagation(); openRatingModal('${st.id}', '${brandName.replace(/'/g, "\\'")}')">⭐ Puan Ver</button>`;
