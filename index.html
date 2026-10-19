@@ -37,7 +37,7 @@
         }
 
         header { background: #0f172a; color: white; padding: 18px; text-align: center; font-weight: bold; font-size: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
-        .header-title { flex: 1; text-align: center; }
+        .header-title { flex: 1; text-align: center; cursor: pointer; user-select: none; }
         .info-icon-btn { background: none; border: none; color: white; font-size: 18px; cursor: pointer; padding: 0 10px; }
 
         #map { height: 40vh; width: 100%; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); }
@@ -164,7 +164,7 @@
 
     <header>
         <div style="width: 30px;"></div>
-        <div class="header-title">⛽ Afyon Akaryakıt</div>
+        <div class="header-title" onclick="handleHeaderSecretClick()" title="Yönetim Paneli">⛽ Afyon Akaryakıt</div>
         <button class="info-icon-btn" onclick="openModal()" title="Yasal Uyarı & Gizlilik">ℹ</button>
     </header>
 
@@ -200,6 +200,34 @@
 
         <div class="footer-link-container">
             <button onclick="openModal()">⚠ Yasal Uyarı, Gizlilik & Kullanım Şartları</button>
+        </div>
+    </div>
+
+    <!-- GİZLİ ADMIN GİRİŞ MODALI -->
+    <div id="adminLoginModal" class="modal-overlay" onclick="handleAdminLoginOutsideClick(event)">
+        <div class="modal-box" style="max-width: 350px;">
+            <div class="modal-header">
+                <h3>🔐 Yönetici Girişi</h3>
+                <button class="close-btn" onclick="closeAdminLoginModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size: 12px; color: #64748b; margin-top:0;">Yönetim paneline erişmek için şifrenizi girin:</p>
+                <input type="password" id="adminPasswordInput" class="search-box" placeholder="Yönetici Şifresi" style="margin-bottom: 12px;">
+                <button class="btn" style="width:100%;" onclick="verifyAdminPassword()">Giriş Yap</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ADMIN ONAY PANELİ MODALI -->
+    <div id="adminPanelModal" class="modal-overlay">
+        <div class="modal-box" style="max-width: 550px;">
+            <div class="modal-header">
+                <h3>🛡️ Fiyat & Rapor Onay Paneli</h3>
+                <button class="close-btn" onclick="closeAdminPanel()">×</button>
+            </div>
+            <div class="modal-body" id="adminReportsContainer">
+                <div style="text-align:center; padding:20px; color:#64748b;">Bekleyen raporlar yükleniyor...</div>
+            </div>
         </div>
     </div>
 
@@ -429,6 +457,157 @@
         let currentSort = 'distance';
 
         let currentSelectedRating = 5;
+
+        // Gizli Admin Tıklama Takibi
+        let adminClickCount = 0;
+        let adminClickTimer = null;
+
+        function handleHeaderSecretClick() {
+            adminClickCount++;
+            if (adminClickCount === 5) {
+                adminClickCount = 0;
+                clearTimeout(adminClickTimer);
+                document.getElementById('adminPasswordInput').value = '';
+                document.getElementById('adminLoginModal').classList.add('open');
+                return;
+            }
+            clearTimeout(adminClickTimer);
+            adminClickTimer = setTimeout(() => { adminClickCount = 0; }, 1000);
+        }
+
+        function closeAdminLoginModal() { document.getElementById('adminLoginModal').classList.remove('open'); }
+        function handleAdminLoginOutsideClick(event) { if (event.target.id === 'adminLoginModal') closeAdminLoginModal(); }
+
+        function verifyAdminPassword() {
+            const pass = document.getElementById('adminPasswordInput').value;
+            // Buradaki şifreyi kendi belirleyeceğin şifreyle değiştirebilirsin
+            if (pass === "afyon0303") { 
+                closeAdminLoginModal();
+                openAdminPanel();
+            } else {
+                alert("Hatalı şifre!");
+            }
+        }
+
+        async function openAdminPanel() {
+            document.getElementById('adminPanelModal').classList.add('open');
+            await loadPendingReports();
+        }
+
+        function closeAdminPanel() { document.getElementById('adminPanelModal').classList.remove('open'); loadData(); }
+
+        async function loadPendingReports() {
+            const container = document.getElementById('adminReportsContainer');
+            container.innerHTML = '<div style="text-align:center; padding:20px; color:#64748b;">Yükleniyor...</div>';
+
+            try {
+                const { data, error } = await _supabase
+                    .from('price_reports')
+                    .select('*')
+                    .eq('is_approved', false)
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+
+                if (!data || data.length === 0) {
+                    container.innerHTML = '<div style="text-align:center; padding:25px; color:#10b981; font-weight:bold;">🎉 Onay bekleyen yeni rapor bulunmuyor!</div>';
+                    return;
+                }
+
+                container.innerHTML = '';
+                data.forEach(item => {
+                    const dateStr = item.created_at ? new Date(item.created_at).toLocaleDateString('tr-TR') + " " + new Date(item.created_at).toLocaleTimeString('tr-TR', {hour: '2-digit', minute:'2-digit'}) : '';
+                    
+                    let photoHtml = '<i style="color:#94a3b8; font-size:11px;">Fotoğraf yüklenmemiş</i>';
+                    if (item.photo_url) {
+                        const { data: pubData } = _supabase.storage.from('station-photos').getPublicUrl(item.photo_url);
+                        if (pubData && pubData.publicUrl) {
+                            photoHtml = `<a href="${pubData.publicUrl}" target="_blank"><img src="${pubData.publicUrl}" style="width:100%; max-height:150px; object-fit:cover; border-radius:8px; margin-top:6px; border:1px solid #cbd5e1;" /></a>`;
+                        }
+                    }
+
+                    container.innerHTML += `
+                        <div id="report-card-${item.id}" style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:12px; padding:14px; margin-bottom:14px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                                <b style="color:#0f172a; font-size:14px;">⛽ ${item.station_name || 'İstasyon'}</b>
+                                <span style="font-size:11px; color:#64748b;">${dateStr}</span>
+                            </div>
+                            <div style="font-size:13px; color:#334155; margin-bottom:8px; display:flex; gap:12px; background:#fff; padding:8px; border-radius:6px; border:1px solid #e2e8f0;">
+                                <span>⛽ Benzin: <b>${item.reported_benzin ? item.reported_benzin + ' ₺' : '-'}</b></span>
+                                <span>🚜 Motorin: <b>${item.reported_motorin ? item.reported_motorin + ' ₺' : '-'}</b></span>
+                                <span>🔥 LPG: <b>${item.reported_lpg ? item.reported_lpg + ' ₺' : '-'}</b></span>
+                            </div>
+                            ${item.note ? `<div style="font-size:12px; color:#475569; margin-bottom:8px;">📝 <b>Not:</b> ${item.note}</div>` : ''}
+                            <div style="margin-bottom:10px;">${photoHtml}</div>
+                            
+                            <div style="display:flex; gap:8px;">
+                                <button class="btn" style="background:#10b981; padding:10px; font-size:12px;" onclick="approveReport(${item.id}, ${item.station_id || 'null'}, ${item.reported_benzin || 'null'}, ${item.reported_motorin || 'null'}, ${item.reported_lpg || 'null'})">✅ Onayla & Fiyatı Güncelle</button>
+                                <button class="report-btn" style="background:#ef4444; color:white; border:none; padding:10px; font-size:12px;" onclick="rejectReport(${item.id})">❌ Reddet / Sil</button>
+                            </div>
+                        </div>
+                    `;
+                });
+            } catch (e) {
+                console.error("Raporlar çekilirken hata:", e);
+                container.innerHTML = '<div style="text-align:center; padding:15px; color:#dc2626;">Raporlar yüklenirken hata oluştu.</div>';
+            }
+        }
+
+        async function approveReport(reportId, stationId, benzin, motorin, lpg) {
+            if (!confirm("Bu raporu onaylamak ve istasyon fiyatlarını güncellemek istiyor musunuz?")) return;
+
+            try {
+                if (stationId) {
+                    let updateData = {};
+                    if (benzin !== null) updateData.benzin_price = benzin;
+                    if (motorin !== null) updateData.motorin_price = motorin;
+                    if (lpg !== null) updateData.lpg_price = lpg;
+
+                    const { error: updateError } = await _supabase
+                        .from('gas_stations')
+                        .update(updateData)
+                        .eq('id', stationId);
+
+                    if (updateError) throw updateError;
+                }
+                const { error: reportError } = await _supabase
+                    .from('price_reports')
+                    .update({ is_approved: true })
+                    .eq('id', reportId);
+
+                if (reportError) throw reportError;
+
+                alert("Rapor başarıyla onaylandı ve fiyatlar güncellendi! 🚀");
+                document.getElementById(`report-card-${reportId}`).remove();
+                
+                const container = document.getElementById('adminReportsContainer');
+                if (container.children.length === 0) {
+                    container.innerHTML = '<div style="text-align:center; padding:25px; color:#10b981; font-weight:bold;">🎉 Onay bekleyen yeni rapor bulunmuyor!</div>';
+                }
+            } catch (e) {
+                console.error("Onaylama hatası:", e.message);
+                alert("İşlem sırasında hata oluştu: " + e.message);
+            }
+        }
+
+        async function rejectReport(reportId) {
+            if (!confirm("Bu raporu reddetmek/silmek istediğinize emin misiniz?")) return;
+
+            try {
+                const { error } = await _supabase
+                    .from('price_reports')
+                    .delete()
+                    .eq('id', reportId);
+
+                if (error) throw error;
+
+                alert("Rapor silindi.");
+                document.getElementById(`report-card-${reportId}`).remove();
+            } catch (e) {
+                console.error("Silme hatası:", e.message);
+                alert("Silinirken hata oluştu.");
+            }
+        }
 
         const redIcon = L.divIcon({
             className: 'custom-red-pin',
@@ -727,7 +906,6 @@
                 submitBtn.textContent = "Puanı Gönder";
             }
         }
-
         async function submitReport() {
             const submitBtn = document.getElementById('submitReportBtn');
             const stationId = document.getElementById('reportStationId').value;
