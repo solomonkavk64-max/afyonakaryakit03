@@ -58,6 +58,7 @@
         #newsBanner p { margin: 0; color: #334155; font-size: 13px; line-height: 1.5; }
         #newsDate { font-size: 11px; color: #64748b; display: block; margin-top: 6px; }
 
+        .district-select { width: 100%; padding: 12px 14px; border: 2px solid #2563eb; border-radius: 10px; font-size: 14px; font-weight: bold; margin-bottom: 10px; outline: none; background: #ffffff; color: #0f172a; box-shadow: 0 2px 4px rgba(37,99,235,0.1); cursor: pointer; }
         .search-box { width: 100%; padding: 12px 14px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 14px; margin-bottom: 12px; outline: none; background: white; }
         .search-box:focus { border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,0.2); }
 
@@ -178,6 +179,29 @@
             <span id="newsDate"></span>
             <span style="font-size: 11px; color: #2563eb; display: block; margin-top: 6px; font-weight: bold;">👉 Akaryakıt ve petrol haberleri için dokunun</span>
         </div>
+
+        <!-- İLÇE SEÇİM DROPDOWN -->
+        <select id="districtSelect" class="district-select" onchange="filterAndRender()">
+            <option value="TÜMÜ">📍 TÜM AFYONKARAHİSAR (18 İlçe)</option>
+            <option value="MERKEZ" selected>🏙️ MERKEZ</option>
+            <option value="BAŞMAKÇI">🏡 BAŞMAKÇI</option>
+            <option value="BAYAT">🏡 BAYAT</option>
+            <option value="BOLVADİN">🏡 BOLVADİN</option>
+            <option value="ÇAY">🏡 ÇAY</option>
+            <option value="ÇOBANLAR">🏡 ÇOBANLAR</option>
+            <option value="DAZKIRI">🏡 DAZKIRI</option>
+            <option value="DİNAR">🏡 DİNAR</option>
+            <option value="EMİRDAĞ">🏡 EMİRDAĞ</option>
+            <option value="EVCİLER">🏡 EVCİLER</option>
+            <option value="HOCALAR">🏡 HOCALAR</option>
+            <option value="İHSANİYE">🏡 İHSANİYE</option>
+            <option value="İSCEHİSAR">🏡 İSCEHİSAR</option>
+            <option value="KIZILÖREN">🏡 KIZILÖREN</option>
+            <option value="SANDIKLI">🏡 SANDIKLI</option>
+            <option value="SİNANPAŞA">🏡 SİNANPAŞA</option>
+            <option value="SULTANDAĞI">🏡 SULTANDAĞI</option>
+            <option value="ŞUHUT">🏡 ŞUHUT</option>
+        </select>
 
         <input type="text" id="searchInput" class="search-box" placeholder="🔍 İstasyon adı, marka veya adres ara..." oninput="filterAndRender()">
 
@@ -450,7 +474,7 @@
         let stationMarkers = [];
         let rawStations = [];
         let stationRatingsMap = {};
-        let userRatingsMap = {}; // Sunucudan gelen kullanıcı oyları
+        let userRatingsMap = {}; 
         let fetchedNewsList = [];
         let userLat = 38.7569;
         let userLng = 30.5387;
@@ -480,7 +504,6 @@
 
         function verifyAdminPassword() {
             const pass = document.getElementById('adminPasswordInput').value;
-            // Buradaki şifreyi kendi belirleyeceğin şifreyle değiştirebilirsin
             if (pass === "afyon0303") { 
                 closeAdminLoginModal();
                 openAdminPanel();
@@ -504,7 +527,7 @@
                 const { data, error } = await _supabase
                     .from('price_reports')
                     .select('*')
-                    .eq('is_approved', false)
+                    .or('is_approved.eq.false,is_approved.is.null')
                     .order('created_at', { ascending: false });
 
                 if (error) throw error;
@@ -526,6 +549,11 @@
                         }
                     }
 
+                    const stId = item.station_id ? item.station_id : 'null';
+                    const benzin = item.reported_benzin ? item.reported_benzin : 'null';
+                    const motorin = item.reported_motorin ? item.reported_motorin : 'null';
+                    const lpg = item.reported_lpg ? item.reported_lpg : 'null';
+
                     container.innerHTML += `
                         <div id="report-card-${item.id}" style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:12px; padding:14px; margin-bottom:14px;">
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
@@ -541,7 +569,7 @@
                             <div style="margin-bottom:10px;">${photoHtml}</div>
                             
                             <div style="display:flex; gap:8px;">
-                                <button class="btn" style="background:#10b981; padding:10px; font-size:12px;" onclick="approveReport(${item.id}, ${item.station_id || 'null'}, ${item.reported_benzin || 'null'}, ${item.reported_motorin || 'null'}, ${item.reported_lpg || 'null'})">✅ Onayla & Fiyatı Güncelle</button>
+                                <button class="btn" style="background:#10b981; padding:10px; font-size:12px;" onclick="approveReport(${item.id}, ${stId}, ${benzin}, ${motorin}, ${lpg})">✅ Onayla & Fiyatı Güncelle</button>
                                 <button class="report-btn" style="background:#ef4444; color:white; border:none; padding:10px; font-size:12px;" onclick="rejectReport(${item.id})">❌ Reddet / Sil</button>
                             </div>
                         </div>
@@ -615,7 +643,6 @@
             iconSize: [18, 18],
             iconAnchor: [9, 9]
         });
-
         window.onload = function() {
             setTimeout(() => {
                 const splash = document.getElementById('splash-screen');
@@ -649,7 +676,6 @@
             return null;
         }
 
-        // Kalıcı Cihaz Kimliği (LocalStorage + Cookie Destekli)
         function getDeviceId() {
             let deviceId = null;
             try { deviceId = localStorage.getItem('app_device_id'); } catch (e) {}
@@ -658,11 +684,10 @@
                 deviceId = 'dev_' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
             }
             try { localStorage.setItem('app_device_id', deviceId); } catch (e) {}
-            setCookie('app_device_id', deviceId, 3650); // 10 yıl kalıcı çerez
+            setCookie('app_device_id', deviceId, 3650);
             return deviceId;
         }
 
-        // Oylanan İstasyonları Takip (LocalStorage + Cookie Destekli)
         function getRatedStations() {
             try {
                 let rated = JSON.parse(localStorage.getItem('rated_stations') || '[]');
@@ -733,6 +758,7 @@
                 `;
             });
         }
+
         function openNewsDetailByIndex(index) {
             const news = fetchedNewsList[index];
             if (!news) return;
@@ -906,6 +932,7 @@
                 submitBtn.textContent = "Puanı Gönder";
             }
         }
+
         async function submitReport() {
             const submitBtn = document.getElementById('submitReportBtn');
             const stationId = document.getElementById('reportStationId').value;
@@ -981,7 +1008,6 @@
                 loadData();
                 return;
             }
-
             navigator.geolocation.getCurrentPosition(
                 (pos) => {
                     userLat = pos.coords.latitude;
@@ -1006,7 +1032,6 @@
             
             const deviceId = getDeviceId();
 
-            // İstasyonları, özetleri ve kullanıcının daha önceki oylarını paralel olarak çek
             const [stationsRes, ratingsRes, myRatingsRes] = await Promise.all([
                 _supabase.from('gas_stations').select('*'),
                 _supabase.from('station_rating_summary').select('*'),
@@ -1063,6 +1088,7 @@
 
         function filterAndRender() {
             const searchVal = document.getElementById('searchInput').value.toLowerCase();
+            const selectedDistrict = document.getElementById('districtSelect').value;
             const list = document.getElementById('list');
             list.innerHTML = '';
 
@@ -1083,6 +1109,18 @@
                 };
             });
 
+            // 1. İLÇE FİLTRELEMESİ
+            if (selectedDistrict !== 'TÜMÜ') {
+                stations = stations.filter(st => {
+                    const stDistrict = (st.district || '').toUpperCase();
+                    const stAddress = (st.address || '').toUpperCase();
+                    const targetDistrict = selectedDistrict.toUpperCase();
+                    
+                    return stDistrict.includes(targetDistrict) || stAddress.includes(targetDistrict);
+                });
+            }
+
+            // 2. ARAMA FİLTRELEMESİ
             if (searchVal.trim() !== '') {
                 stations = stations.filter(st => 
                     (st.name && st.name.toLowerCase().includes(searchVal)) ||
@@ -1091,6 +1129,7 @@
                 );
             }
 
+            // 3. SIRALAMA
             if (currentSort === 'distance') {
                 stations.sort((a, b) => a.calculatedDistance - b.calculatedDistance);
             } else if (currentSort === 'benzin') {
@@ -1102,7 +1141,7 @@
             }
 
             if (stations.length === 0) {
-                list.innerHTML = '<div class="card" style="text-align:center;">İstasyon kaydı bulunamadı.</div>';
+                list.innerHTML = '<div class="card" style="text-align:center;">Seçilen ilçede veya arama kriterinde istasyon kaydı bulunamadı.</div>';
                 return;
             }
 
@@ -1120,7 +1159,6 @@
                        </div>`
                     : `<div class="station-rating-badge" style="color:#64748b; background:#f1f5f9;">⭐ Henüz puanlanmadı</div>`;
 
-                // Kullanıcının daha önce oy verip vermediğini sunucu ve yerel cookie/storage üzerinden denetle
                 const stIdStr = String(st.id);
                 const hasRated = userRatingsMap[stIdStr] || ratedStationsList.includes(stIdStr);
                 const rateButtonHtml = hasRated
