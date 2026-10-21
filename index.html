@@ -699,16 +699,6 @@
             } catch(e) { return []; }
         }
 
-        function markStationAsRated(stationId) {
-            let rated = getRatedStations();
-            const stIdStr = String(stationId);
-            if (!rated.includes(stIdStr)) {
-                rated.push(stIdStr);
-                try { localStorage.setItem('rated_stations', JSON.stringify(rated)); } catch(e) {}
-                setCookie('rated_stations', JSON.stringify(rated), 3650);
-            }
-        }
-
         async function loadNews() {
             try {
                 const { data } = await _supabase
@@ -912,7 +902,7 @@
                 if (error) {
                     if (error.code === '23505') {
                         alert("Bu istasyon için daha önce değerlendirme yaptınız.");
-                        markStationAsRated(stationId); 
+                        userRatingsMap[String(stationId)] = true;
                         closeRatingModal();
                         loadData();
                     } else {
@@ -920,7 +910,7 @@
                     }
                 } else {
                     alert("Değerlendirmeniz için teşekkür ederiz! ⭐");
-                    markStationAsRated(stationId); 
+                    userRatingsMap[String(stationId)] = true;
                     closeRatingModal();
                     loadData();
                 }
@@ -1052,13 +1042,14 @@
                 });
             }
 
+            // DÜZELTME: Sadece veritabanında bu cihaza ait gerçek puan kayıtları varsa "Puan Verildi" işareti konulur.
             userRatingsMap = {};
             if (myRatingsRes.data) {
                 myRatingsRes.data.forEach(r => {
                     userRatingsMap[String(r.station_id)] = true;
-                    markStationAsRated(r.station_id);
                 });
             }
+            // Eski hatalı localStorage önbelleği tamamen temizlendi.
 
             filterAndRender();
         }
@@ -1094,8 +1085,6 @@
 
             stationMarkers.forEach(m => { if(m) map.removeLayer(m); });
             stationMarkers = [];
-
-            const ratedStationsList = getRatedStations();
 
             let stations = rawStations.map(st => {
                 const stLat = parseFloat(st.latitude) || 0;
@@ -1160,7 +1149,8 @@
                     : `<div class="station-rating-badge" style="color:#64748b; background:#f1f5f9;">⭐ Henüz puanlanmadı</div>`;
 
                 const stIdStr = String(st.id);
-                const hasRated = userRatingsMap[stIdStr] || ratedStationsList.includes(stIdStr);
+                // DÜZELTME: Sadece veritabanı kayıtlarına (userRatingsMap) bakılarak buton durumu belirleniyor
+                const hasRated = !!userRatingsMap[stIdStr];
                 const rateButtonHtml = hasRated
                     ? `<div class="rated-badge-btn">✅ Puan Verildi</div>`
                     : `<button class="rate-action-btn" onclick="event.stopPropagation(); openRatingModal('${st.id}', '${brandName.replace(/'/g, "\\'")}')">⭐ Puan Ver</button>`;
