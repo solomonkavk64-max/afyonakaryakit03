@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Afyonkarahisar Akaryakıt Fiyatları ve Takip</title>
+    <title>Afyonkarahisar Akaryakıt ve Şarj Takip</title>
     
     <!-- PWABuilder ve Play Store İçin Manifest Bağlantısı -->
     <link rel="manifest" href="manifest.json">
@@ -75,12 +75,14 @@
         .status { text-align: center; font-size: 13px; font-weight: 600; margin-bottom: 15px; color: #475569; background: #fff; padding: 10px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
 
         .card { background: white; border-radius: 14px; padding: 16px; margin-bottom: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-left: 5px solid #2563eb; cursor: pointer; transition: transform 0.1s ease, box-shadow 0.1s ease; }
+        .card.ev-card { border-left-color: #10b981; }
         .card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
         .station-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
         .station-title { font-size: 17px; font-weight: bold; color: #0f172a; }
         .station-address { font-size: 12px; color: #64748b; margin-bottom: 8px; }
         
         .station-rating-badge { display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: bold; color: #d97706; background: #fef3c7; padding: 4px 8px; border-radius: 6px; margin-bottom: 8px; width: fit-content; }
+        .ev-badge { display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: bold; color: #047857; background: #d1fae5; padding: 4px 8px; border-radius: 6px; margin-bottom: 8px; width: fit-content; }
         
         .distance-badge { background: #e0f2fe; color: #0369a1; padding: 5px 10px; border-radius: 8px; font-size: 12px; font-weight: bold; }
         
@@ -88,6 +90,7 @@
         .price-item { flex: 1; }
         .price-label { color: #64748b; font-size: 11px; margin-bottom: 3px; text-transform: uppercase; font-weight: bold; }
         .price-val { font-weight: bold; color: #dc2626; font-size: 14px; }
+        .price-val.ev-val { color: #059669; }
 
         .card-buttons { display: flex; gap: 8px; margin-top: 10px; }
         .report-btn { background: #f1f5f9; border: 1px solid #cbd5e1; color: #475569; padding: 8px 10px; border-radius: 8px; font-size: 12px; cursor: pointer; font-weight: bold; flex: 1; transition: background 0.2s; }
@@ -158,8 +161,8 @@
     <div id="splash-screen">
         <div class="splash-content">
             <div class="splash-logo">⛽</div>
-            <h1>Afyon Akaryakıt</h1>
-            <p>Fiyatlar ve İstasyon Takip Sistemi</p>
+            <h1>Afyon Akaryakıt & Şarj</h1>
+            <p>Fiyatlar, Şarj Üniteleri ve İstasyon Takip</p>
         </div>
     </div>
 
@@ -203,13 +206,14 @@
             <option value="ŞUHUT">🏡 ŞUHUT</option>
         </select>
 
-        <input type="text" id="searchInput" class="search-box" placeholder="🔍 İstasyon adı, marka veya adres ara..." oninput="filterAndRender()">
+        <input type="text" id="searchInput" class="search-box" placeholder="🔍 İstasyon adı, marka, adres veya şarj tipi ara..." oninput="filterAndRender()">
 
         <div class="filter-bar">
             <button class="filter-btn active" onclick="setSort('distance', this)">📍 En Yakın</button>
             <button class="filter-btn" onclick="setSort('benzin', this)">⛽ En Ucuz Benzin</button>
             <button class="filter-btn" onclick="setSort('motorin', this)">🚜 En Ucuz Motorin</button>
             <button class="filter-btn" onclick="setSort('lpg', this)">🔥 En Ucuz LPG</button>
+            <button class="filter-btn" onclick="setSort('ev', this)" style="background:#d1fae5; color:#065f46;">⚡ Şarj İstasyonları</button>
         </div>
         
         <!-- MESAFE BİLGİLENDİRME NOTU -->
@@ -294,7 +298,7 @@
             </div>
             <div class="modal-body">
                 <h4>1. Yer Sağlayıcı Sorumluluğu (5651 Sayılı Kanun)</h4>
-                <p>Bu uygulama 5651 sayılı Kanun uyarınca <strong>"Yer Sağlayıcı"</strong> konumundadır. Uygulama içerisindeki akaryakıt fiyatları ve kullanıcı bildirimleri üçüncü şahıslar veya kullanıcılar tarafından sağlanmakta olup, içeriklerin doğruluğu anlık olarak değişiklik gösterebilir.</p>
+                <p>Bu uygulama 5651 sayılı Kanun uyarınca <strong>"Yer Sağlayıcı"</strong> konumundadır. Uygulama içerisindeki akaryakıt ve şarj fiyatları üçüncü şahıslar veya kullanıcılar tarafından sağlanmakta olup, içeriklerin doğruluğu anlık olarak değişiklik gösterebilir.</p>
                 
                 <h4>2. Fiyat ve Bilgi Bildirimleri</h4>
                 <p>Kullanıcılar tarafından sisteme yüklenen fiyat, fotoğraf ve açıklamalar tamamen bildiren kişinin sorumluluğundadır. Yönetim onayından geçmeyen bilgiler listelerde bağlayıcı nitelik taşımaz.</p>
@@ -473,6 +477,7 @@
         let userMarker = null;
         let stationMarkers = [];
         let rawStations = [];
+        let rawEvStations = [];
         let stationRatingsMap = {};
         let userRatingsMap = {}; 
         let fetchedNewsList = [];
@@ -549,7 +554,7 @@
                         }
                     }
 
-                    const stId = item.station_id ? item.station_id : 'null';
+                    const stId = item.station_id ? `'${item.station_id}'` : 'null';
                     const benzin = item.reported_benzin ? item.reported_benzin : 'null';
                     const motorin = item.reported_motorin ? item.reported_motorin : 'null';
                     const lpg = item.reported_lpg ? item.reported_lpg : 'null';
@@ -643,6 +648,14 @@
             iconSize: [18, 18],
             iconAnchor: [9, 9]
         });
+
+        const greenIcon = L.divIcon({
+            className: 'custom-green-pin',
+            html: '<div style="background-color: #10b981; width: 18px; height: 18px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 8px rgba(0,0,0,0.6);"></div>',
+            iconSize: [18, 18],
+            iconAnchor: [9, 9]
+        });
+
         window.onload = function() {
             setTimeout(() => {
                 const splash = document.getElementById('splash-screen');
@@ -686,17 +699,6 @@
             try { localStorage.setItem('app_device_id', deviceId); } catch (e) {}
             setCookie('app_device_id', deviceId, 3650);
             return deviceId;
-        }
-
-        function getRatedStations() {
-            try {
-                let rated = JSON.parse(localStorage.getItem('rated_stations') || '[]');
-                if (rated.length === 0) {
-                    let cookieRated = getCookie('rated_stations');
-                    if (cookieRated) rated = JSON.parse(cookieRated);
-                }
-                return rated.map(id => String(id));
-            } catch(e) { return []; }
         }
 
         async function loadNews() {
@@ -839,7 +841,7 @@
                 const { data, error } = await _supabase
                     .from('station_ratings')
                     .select('*')
-                    .eq('station_id', parseInt(stationId))
+                    .eq('station_id', stationId)
                     .order('created_at', { ascending: false });
 
                 if (error) throw error;
@@ -878,7 +880,7 @@
 
         async function submitRating() {
             const submitBtn = document.getElementById('submitRatingBtn');
-            const stationId = parseInt(document.getElementById('ratingStationId').value);
+            const stationId = document.getElementById('ratingStationId').value;
             const cleanliness = parseInt(document.getElementById('cleanlinessInput').value);
             const service = parseInt(document.getElementById('serviceInput').value);
             const comment = document.getElementById('ratingComment').value.trim();
@@ -966,7 +968,7 @@
                 }
 
                 const { error } = await _supabase.from('price_reports').insert([{ 
-                    station_id: stationId ? parseInt(stationId) : null, 
+                    station_id: stationId ? stationId : null, 
                     station_name: stationName,
                     reported_benzin: benzin, 
                     reported_motorin: motorin, 
@@ -1022,8 +1024,9 @@
             
             const deviceId = getDeviceId();
 
-            const [stationsRes, ratingsRes, myRatingsRes] = await Promise.all([
+            const [stationsRes, evStationsRes, ratingsRes, myRatingsRes] = await Promise.all([
                 _supabase.from('gas_stations').select('*'),
+                _supabase.from('ev_charging_stations').select('*'),
                 _supabase.from('station_rating_summary').select('*'),
                 _supabase.from('station_ratings').select('station_id').eq('user_device_id', deviceId)
             ]);
@@ -1034,6 +1037,7 @@
             }
 
             rawStations = stationsRes.data || [];
+            rawEvStations = evStationsRes.data || [];
             
             stationRatingsMap = {};
             if (ratingsRes.data) {
@@ -1042,14 +1046,12 @@
                 });
             }
 
-            // DÜZELTME: Sadece veritabanında bu cihaza ait gerçek puan kayıtları varsa "Puan Verildi" işareti konulur.
             userRatingsMap = {};
             if (myRatingsRes.data) {
                 myRatingsRes.data.forEach(r => {
                     userRatingsMap[String(r.station_id)] = true;
                 });
             }
-            // Eski hatalı localStorage önbelleği tamamen temizlendi.
 
             filterAndRender();
         }
@@ -1086,88 +1088,102 @@
             stationMarkers.forEach(m => { if(m) map.removeLayer(m); });
             stationMarkers = [];
 
-            let stations = rawStations.map(st => {
+            // 1. Akaryakıt İstasyonlarını Hazırla
+            let mappedGas = rawStations.map(st => {
                 const stLat = parseFloat(st.latitude) || 0;
                 const stLng = parseFloat(st.longitude) || 0;
                 const ratingObj = stationRatingsMap[st.id] || { avg_rating: 0, total_reviews: 0 };
                 return { 
                     ...st, 
+                    isEv: false,
                     calculatedDistance: calculateDistance(userLat, userLng, stLat, stLng),
                     avgRating: ratingObj.avg_rating || 0,
                     totalReviews: ratingObj.total_reviews || 0
                 };
             });
 
-            // 1. İLÇE FİLTRELEMESİ
+            // 2. Elektrikli Şarj İstasyonlarını Hazırla
+            let mappedEv = rawEvStations.map(ev => {
+                const evLat = parseFloat(ev.latitude) || 0;
+                const evLng = parseFloat(ev.longitude) || 0;
+                return {
+                    ...ev,
+                    isEv: true,
+                    calculatedDistance: calculateDistance(userLat, userLng, evLat, evLng),
+                    avgRating: 0,
+                    totalReviews: 0
+                };
+            });
+
+            let combinedStations = [...mappedGas, ...mappedEv];
+
+            // İlçe Filtrelemesi
             if (selectedDistrict !== 'TÜMÜ') {
-                stations = stations.filter(st => {
+                combinedStations = combinedStations.filter(st => {
                     const stDistrict = (st.district || '').toUpperCase();
                     const stAddress = (st.address || '').toUpperCase();
                     const targetDistrict = selectedDistrict.toUpperCase();
-                    
                     return stDistrict.includes(targetDistrict) || stAddress.includes(targetDistrict);
                 });
             }
 
-            // 2. ARAMA FİLTRELEMESİ
+            // Arama Kutusu Filtrelemesi
             if (searchVal.trim() !== '') {
-                stations = stations.filter(st => 
+                combinedStations = combinedStations.filter(st => 
                     (st.name && st.name.toLowerCase().includes(searchVal)) ||
                     (st.brand && st.brand.toLowerCase().includes(searchVal)) ||
-                    (st.address && st.address.toLowerCase().includes(searchVal))
+                    (st.address && st.address.toLowerCase().includes(searchVal)) ||
+                    (st.socket_types && st.socket_types.toLowerCase().includes(searchVal))
                 );
             }
 
-            // 3. SIRALAMA
-            if (currentSort === 'distance') {
-                stations.sort((a, b) => a.calculatedDistance - b.calculatedDistance);
-            } else if (currentSort === 'benzin') {
-                stations.sort((a, b) => (parseFloat(a.benzin_price) || 999) - (parseFloat(b.benzin_price) || 999));
-            } else if (currentSort === 'motorin') {
-                stations.sort((a, b) => (parseFloat(a.motorin_price) || 999) - (parseFloat(b.motorin_price) || 999));
-            } else if (currentSort === 'lpg') {
-                stations.sort((a, b) => (parseFloat(a.lpg_price) || 999) - (parseFloat(b.lpg_price) || 999));
+            // Eğer "Sadece Şarj İstasyonları" seçildiyse akaryakıtları filtrele
+            if (currentSort === 'ev') {
+                combinedStations = combinedStations.filter(st => st.isEv);
             }
 
-            if (stations.length === 0) {
-                list.innerHTML = '<div class="card" style="text-align:center;">Seçilen ilçede veya arama kriterinde istasyon kaydı bulunamadı.</div>';
+            // Sıralama
+            if (currentSort === 'distance' || currentSort === 'ev') {
+                combinedStations.sort((a, b) => a.calculatedDistance - b.calculatedDistance);
+            } else if (currentSort === 'benzin') {
+                combinedStations.sort((a, b) => {
+                    if (a.isEv) return 1; if (b.isEv) return -1;
+                    return (parseFloat(a.benzin_price) || 999) - (parseFloat(b.benzin_price) || 999);
+                });
+            } else if (currentSort === 'motorin') {
+                combinedStations.sort((a, b) => {
+                    if (a.isEv) return 1; if (b.isEv) return -1;
+                    return (parseFloat(a.motorin_price) || 999) - (parseFloat(b.motorin_price) || 999);
+                });
+            } else if (currentSort === 'lpg') {
+                combinedStations.sort((a, b) => {
+                    if (a.isEv) return 1; if (b.isEv) return -1;
+                    return (parseFloat(a.lpg_price) || 999) - (parseFloat(b.lpg_price) || 999);
+                });
+            }
+
+            if (combinedStations.length === 0) {
+                list.innerHTML = '<div class="card" style="text-align:center;">Seçilen kriterde istasyon kaydı bulunamadı.</div>';
                 return;
             }
 
-            stations.forEach((st, index) => {
+            combinedStations.forEach((st, index) => {
                 const distText = st.calculatedDistance === 9999 ? "Konum girilmedi" : (st.calculatedDistance < 1 ? Math.round(st.calculatedDistance * 1000) + " m" : st.calculatedDistance.toFixed(1) + " km");
-                const brandName = st.brand ? `${st.brand} - ${st.name || ''}` : (st.name || 'Akaryakıt İstasyonu');
-                const benzinVal = st.benzin_price ? `${st.benzin_price} ₺` : '-';
-                const motorinVal = st.motorin_price ? `${st.motorin_price} ₺` : '-';
-                const lpgVal = st.lpg_price ? `${st.lpg_price} ₺` : '-';
-
-                const ratingVal = st.avgRating ? parseFloat(st.avgRating).toFixed(1) : '0.0';
-                const ratingBadgeHtml = st.totalReviews > 0 
-                    ? `<div class="station-rating-badge" onclick="event.stopPropagation(); openCommentsModal('${st.id}', '${brandName.replace(/'/g, "\\'")}')" style="cursor:pointer;">
-                        ⭐ ${ratingVal} <span style="font-weight:normal; color:#78350f;">(${st.totalReviews} değerlendirme - Detaylar)</span>
-                       </div>`
-                    : `<div class="station-rating-badge" style="color:#64748b; background:#f1f5f9;">⭐ Henüz puanlanmadı</div>`;
-
-                const stIdStr = String(st.id);
-                // DÜZELTME: Sadece veritabanı kayıtlarına (userRatingsMap) bakılarak buton durumu belirleniyor
-                const hasRated = !!userRatingsMap[stIdStr];
-                const rateButtonHtml = hasRated
-                    ? `<div class="rated-badge-btn">✅ Puan Verildi</div>`
-                    : `<button class="rate-action-btn" onclick="event.stopPropagation(); openRatingModal('${st.id}', '${brandName.replace(/'/g, "\\'")}')">⭐ Puan Ver</button>`;
-
+                const brandName = st.brand ? `${st.brand} - ${st.name || ''}` : (st.name || 'İstasyon');
+                
                 const stLat = parseFloat(st.latitude);
                 const stLng = parseFloat(st.longitude);
                 const geoUrl = `geo:${stLat},${stLng}?q=${stLat},${stLng}(${encodeURIComponent(brandName)})`;
 
                 let marker = null;
                 if (stLat && stLng && stLat !== 0 && stLng !== 0) {
-                    marker = L.marker([stLat, stLng]).addTo(map)
+                    marker = L.marker([stLat, stLng], { icon: st.isEv ? greenIcon : redIcon }).addTo(map)
                         .bindPopup(`
                             <div style="text-align:center;">
                                 <b>${brandName}</b><br>
                                 <span style="font-size:11px; color:#555;">${st.address || ''}</span><br>
                                 <div class="route-btn-container">
-                                    <a class="route-btn" href="${geoUrl}">🧭 Cihaz Haritası ile Aç</a>
+                                    <a class="route-btn" href="${geoUrl}">🧭 Harita ile Aç</a>
                                 </div>
                             </div>
                         `);
@@ -1178,27 +1194,71 @@
 
                 const currentMarkerIndex = stationMarkers.length - 1;
 
-                list.innerHTML += `
-                    <div class="card" onclick="focusStationOnMap(${stLat}, ${stLng},${currentMarkerIndex})">
-                        <div class="station-header">
-                            <div class="station-title">⛽ ${brandName}</div>
-                            <div class="distance-badge">📍 ${distText}</div>
+                if (st.isEv) {
+                    // Elektrikli Şarj Kartı Tasarımı
+                    const priceKwStr = st.price_kwh ? `${st.price_kwh} ₺/kWh` : '-';
+                    const socketStr = st.socket_types || 'CCS2 / Type 2';
+                    const powerStr = st.power_kw || 'Hızlı Şarj (DC)';
+
+                    list.innerHTML += `
+                        <div class="card ev-card" onclick="focusStationOnMap(${stLat}, ${stLng},${currentMarkerIndex})">
+                            <div class="station-header">
+                                <div class="station-title">⚡ ${brandName}</div>
+                                <div class="distance-badge">📍 ${distText}</div>
+                            </div>
+                            <div class="station-address">📍 ${st.address || ''}</div>
+                            <div class="ev-badge">⚡ Elektrikli Araç Şarj Noktası</div>
+                            <div class="prices">
+                                <div class="price-item"><div class="price-label">Soket Tipi</div><div class="price-val ev-val" style="font-size:12px;">${socketStr}</div></div>
+                                <div class="price-item"><div class="price-label">Şarj Gücü</div><div class="price-val ev-val" style="font-size:12px;">${powerStr}</div></div>
+                                <div class="price-item"><div class="price-label">Birim Ücret</div><div class="price-val ev-val">${priceKwStr}</div></div>
+                            </div>
+                            <div class="card-buttons">
+                                <a class="route-btn" style="text-align:center; text-decoration:none; display:block; flex:1;" href="${geoUrl}" onclick="event.stopPropagation()">🧭 Yol Tarifi Al</a>
+                            </div>
                         </div>
-                        <div class="station-address">📍 ${st.address || ''}</div>
-                        ${ratingBadgeHtml}
-                        <div class="prices">
-                            <div class="price-item"><div class="price-label">Benzin</div><div class="price-val">${benzinVal}</div></div>
-                            <div class="price-item"><div class="price-label">Motorin</div><div class="price-val">${motorinVal}</div></div>
-                            <div class="price-item"><div class="price-label">LPG</div><div class="price-val">${lpgVal}</div></div>
+                    `;
+                } else {
+                    // Normal Akaryakıt İstasyonu Kartı
+                    const benzinVal = st.benzin_price ? `${st.benzin_price} ₺` : '-';
+                    const motorinVal = st.motorin_price ? `${st.motorin_price} ₺` : '-';
+                    const lpgVal = st.lpg_price ? `${st.lpg_price} ₺` : '-';
+
+                    const ratingVal = st.avgRating ? parseFloat(st.avgRating).toFixed(1) : '0.0';
+                    const ratingBadgeHtml = st.totalReviews > 0 
+                        ? `<div class="station-rating-badge" onclick="event.stopPropagation(); openCommentsModal('${st.id}', '${brandName.replace(/'/g, "\\'")}')" style="cursor:pointer;">
+                            ⭐ ${ratingVal} <span style="font-weight:normal; color:#78350f;">(${st.totalReviews} değerlendirme - Detaylar)</span>
+                           </div>`
+                        : `<div class="station-rating-badge" style="color:#64748b; background:#f1f5f9;">⭐ Henüz puanlanmadı</div>`;
+
+                    const stIdStr = String(st.id);
+                    const hasRated = !!userRatingsMap[stIdStr];
+                    const rateButtonHtml = hasRated
+                        ? `<div class="rated-badge-btn">✅ Puan Verildi</div>`
+                        : `<button class="rate-action-btn" onclick="event.stopPropagation(); openRatingModal('${st.id}', '${brandName.replace(/'/g, "\\'")}')">⭐ Puan Ver</button>`;
+
+                    list.innerHTML += `
+                        <div class="card" onclick="focusStationOnMap(${stLat}, ${stLng},${currentMarkerIndex})">
+                            <div class="station-header">
+                                <div class="station-title">⛽ ${brandName}</div>
+                                <div class="distance-badge">📍 ${distText}</div>
+                            </div>
+                            <div class="station-address">📍 ${st.address || ''}</div>
+                            ${ratingBadgeHtml}
+                            <div class="prices">
+                                <div class="price-item"><div class="price-label">Benzin</div><div class="price-val">${benzinVal}</div></div>
+                                <div class="price-item"><div class="price-label">Motorin</div><div class="price-val">${motorinVal}</div></div>
+                                <div class="price-item"><div class="price-label">LPG</div><div class="price-val">${lpgVal}</div></div>
+                            </div>
+                            <div class="card-buttons">
+                                ${rateButtonHtml}
+                                <button class="report-btn" onclick="event.stopPropagation(); openReportModal('${st.id || ''}', '${brandName.replace(/'/g, "\\'")}', '${st.benzin_price || '-'}', '${st.motorin_price || '-'}', '${st.lpg_price || '-'}')">
+                                    📝 Fiyat Bildir
+                                </button>
+                            </div>
                         </div>
-                        <div class="card-buttons">
-                            ${rateButtonHtml}
-                            <button class="report-btn" onclick="event.stopPropagation(); openReportModal('${st.id || ''}', '${brandName.replace(/'/g, "\\'")}', '${st.benzin_price || '-'}', '${st.motorin_price || '-'}', '${st.lpg_price || '-'}')">
-                                📝 Fiyat Bildir
-                            </button>
-                        </div>
-                    </div>
-                `;
+                    `;
+                }
             });
         }
     </script>
