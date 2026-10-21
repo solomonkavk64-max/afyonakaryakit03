@@ -58,6 +58,38 @@
         #newsBanner p { margin: 0; color: #334155; font-size: 13px; line-height: 1.5; }
         #newsDate { font-size: 11px; color: #64748b; display: block; margin-top: 6px; }
 
+        /* MOD SEÇİMİ (AKARYAKIT / ŞARJ) */
+        .mode-switch-container {
+            display: flex;
+            background: #e2e8f0;
+            padding: 4px;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            gap: 4px;
+        }
+        .mode-btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 9px;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #475569;
+            background: transparent;
+            transition: all 0.2s ease;
+        }
+        .mode-btn.active-gas {
+            background: #2563eb;
+            color: white;
+            box-shadow: 0 2px 4px rgba(37,99,235,0.2);
+        }
+        .mode-btn.active-ev {
+            background: #10b981;
+            color: white;
+            box-shadow: 0 2px 4px rgba(16,185,129,0.2);
+        }
+
         .district-select { width: 100%; padding: 12px 14px; border: 2px solid #2563eb; border-radius: 10px; font-size: 14px; font-weight: bold; margin-bottom: 10px; outline: none; background: #ffffff; color: #0f172a; box-shadow: 0 2px 4px rgba(37,99,235,0.1); cursor: pointer; }
         .search-box { width: 100%; padding: 12px 14px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 14px; margin-bottom: 12px; outline: none; background: white; }
         .search-box:focus { border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,0.2); }
@@ -183,6 +215,12 @@
             <span style="font-size: 11px; color: #2563eb; display: block; margin-top: 6px; font-weight: bold;">👉 Akaryakıt ve petrol haberleri için dokunun</span>
         </div>
 
+        <!-- ANA MOD SEÇİMİ (AKARYAKIT / ŞARJ) -->
+        <div class="mode-switch-container">
+            <button id="modeGasBtn" class="mode-btn active-gas" onclick="switchMode('gas')">⛽ Akaryakıt İstasyonları</button>
+            <button id="modeEvBtn" class="mode-btn" onclick="switchMode('ev')">⚡ Şarj İstasyonları</button>
+        </div>
+
         <!-- İLÇE SEÇİM DROPDOWN -->
         <select id="districtSelect" class="district-select" onchange="filterAndRender()">
             <option value="TÜMÜ">📍 TÜM AFYONKARAHİSAR (18 İlçe)</option>
@@ -208,12 +246,12 @@
 
         <input type="text" id="searchInput" class="search-box" placeholder="🔍 İstasyon adı, marka, adres veya şarj tipi ara..." oninput="filterAndRender()">
 
-        <div class="filter-bar">
+        <!-- AKARYAKIT SIRALAMA FİLTRELERİ -->
+        <div class="filter-bar" id="gasFilterBar">
             <button class="filter-btn active" onclick="setSort('distance', this)">📍 En Yakın</button>
             <button class="filter-btn" onclick="setSort('benzin', this)">⛽ En Ucuz Benzin</button>
             <button class="filter-btn" onclick="setSort('motorin', this)">🚜 En Ucuz Motorin</button>
             <button class="filter-btn" onclick="setSort('lpg', this)">🔥 En Ucuz LPG</button>
-            <button class="filter-btn" onclick="setSort('ev', this)" style="background:#d1fae5; color:#065f46; border:1px solid #10b981;">⚡ Şarj İstasyonları</button>
         </div>
         
         <!-- MESAFE BİLGİLENDİRME NOTU -->
@@ -483,6 +521,8 @@
         let fetchedNewsList = [];
         let userLat = 38.7569;
         let userLng = 30.5387;
+        
+        let currentAppMode = 'gas'; // 'gas' veya 'ev'
         let currentSort = 'distance';
 
         let currentSelectedRating = 5;
@@ -642,18 +682,32 @@
             }
         }
 
-        const redIcon = L.divIcon({
-            className: 'custom-red-pin',
-            html: '<div style="background-color: #dc2626; width: 18px; height: 18px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 8px rgba(0,0,0,0.6);"></div>',
-            iconSize: [18, 18],
-            iconAnchor: [9, 9]
+        // ESKİ SİSTEMDEKİ LEAFLET STANDART MAVİ VE YEŞİL DAMLA PİNLERİ
+        const defaultBlueIcon = new L.Icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41]
         });
 
-        const greenIcon = L.divIcon({
-            className: 'custom-green-pin',
-            html: '<div style="background-color: #10b981; width: 18px; height: 18px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 8px rgba(0,0,0,0.6);"></div>',
-            iconSize: [18, 18],
-            iconAnchor: [9, 9]
+        const evGreenIcon = new L.Icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41]
+        });
+
+        const userRedIcon = new L.Icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41]
         });
 
         window.onload = function() {
@@ -1007,7 +1061,7 @@
                     status.innerHTML = `✅ Konum alındı. İstasyonlar sıralandı.`;
                     map.setView([userLat, userLng], 12);
                     if (userMarker) map.removeLayer(userMarker);
-                    userMarker = L.marker([userLat, userLng], {icon: redIcon}).addTo(map);
+                    userMarker = L.marker([userLat, userLng], {icon: userRedIcon}).addTo(map);
                     loadData();
                 },
                 (err) => {
@@ -1016,6 +1070,26 @@
                 },
                 { enableHighAccuracy: true, timeout: 10000 }
             );
+        }
+
+        function switchMode(mode) {
+            currentAppMode = mode;
+            const gasBtn = document.getElementById('modeGasBtn');
+            const evBtn = document.getElementById('modeEvBtn');
+            const gasFilterBar = document.getElementById('gasFilterBar');
+
+            if (mode === 'gas') {
+                gasBtn.className = 'mode-btn active-gas';
+                evBtn.className = 'mode-btn';
+                gasFilterBar.style.display = 'flex';
+                currentSort = 'distance';
+            } else {
+                evBtn.className = 'mode-btn active-ev';
+                gasBtn.className = 'mode-btn';
+                gasFilterBar.style.display = 'none';
+                currentSort = 'distance';
+            }
+            filterAndRender();
         }
 
         async function loadData() {
@@ -1067,7 +1141,7 @@
 
         function setSort(sortType, btnElement) {
             currentSort = sortType;
-            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('#gasFilterBar .filter-btn').forEach(b => b.classList.remove('active'));
             btnElement.classList.add('active');
             filterAndRender();
         }
@@ -1088,38 +1162,40 @@
             stationMarkers.forEach(m => { if(m) map.removeLayer(m); });
             stationMarkers = [];
 
-            // 1. Akaryakıt İstasyonlarını Hazırla
-            let mappedGas = rawStations.map(st => {
-                const stLat = parseFloat(st.latitude) || 0;
-                const stLng = parseFloat(st.longitude) || 0;
-                const ratingObj = stationRatingsMap[st.id] || { avg_rating: 0, total_reviews: 0 };
-                return { 
-                    ...st, 
-                    isEv: false,
-                    calculatedDistance: calculateDistance(userLat, userLng, stLat, stLng),
-                    avgRating: ratingObj.avg_rating || 0,
-                    totalReviews: ratingObj.total_reviews || 0
-                };
-            });
+            let activeList = [];
 
-            // 2. Elektrikli Şarj İstasyonlarını Hazırla
-            let mappedEv = rawEvStations.map(ev => {
-                const evLat = parseFloat(ev.latitude) || 0;
-                const evLng = parseFloat(ev.longitude) || 0;
-                return {
-                    ...ev,
-                    isEv: true,
-                    calculatedDistance: calculateDistance(userLat, userLng, evLat, evLng),
-                    avgRating: 0,
-                    totalReviews: 0
-                };
-            });
-
-            let combinedStations = [...mappedGas, ...mappedEv];
+            if (currentAppMode === 'gas') {
+                // Akaryakıt İstasyonları Listesi
+                activeList = rawStations.map(st => {
+                    const stLat = parseFloat(st.latitude) || 0;
+                    const stLng = parseFloat(st.longitude) || 0;
+                    const ratingObj = stationRatingsMap[st.id] || { avg_rating: 0, total_reviews: 0 };
+                    return { 
+                        ...st, 
+                        isEv: false,
+                        calculatedDistance: calculateDistance(userLat, userLng, stLat, stLng),
+                        avgRating: ratingObj.avg_rating || 0,
+                        totalReviews: ratingObj.total_reviews || 0
+                    };
+                });
+            } else {
+                // Elektrikli Şarj İstasyonları Listesi
+                activeList = rawEvStations.map(ev => {
+                    const evLat = parseFloat(ev.latitude) || 0;
+                    const evLng = parseFloat(ev.longitude) || 0;
+                    return {
+                        ...ev,
+                        isEv: true,
+                        calculatedDistance: calculateDistance(userLat, userLng, evLat, evLng),
+                        avgRating: 0,
+                        totalReviews: 0
+                    };
+                });
+            }
 
             // İlçe Filtrelemesi
             if (selectedDistrict !== 'TÜMÜ') {
-                combinedStations = combinedStations.filter(st => {
+                activeList = activeList.filter(st => {
                     const stDistrict = (st.district || '').toUpperCase();
                     const stAddress = (st.address || '').toUpperCase();
                     const targetDistrict = selectedDistrict.toUpperCase();
@@ -1129,7 +1205,7 @@
 
             // Arama Kutusu Filtrelemesi
             if (searchVal.trim() !== '') {
-                combinedStations = combinedStations.filter(st => 
+                activeList = activeList.filter(st => 
                     (st.name && st.name.toLowerCase().includes(searchVal)) ||
                     (st.brand && st.brand.toLowerCase().includes(searchVal)) ||
                     (st.address && st.address.toLowerCase().includes(searchVal)) ||
@@ -1137,37 +1213,23 @@
                 );
             }
 
-            // Eğer "Sadece Şarj İstasyonları" seçildiyse akaryakıtları filtrele
-            if (currentSort === 'ev') {
-                combinedStations = combinedStations.filter(st => st.isEv);
-            }
-
             // Sıralama
-            if (currentSort === 'distance' || currentSort === 'ev') {
-                combinedStations.sort((a, b) => a.calculatedDistance - b.calculatedDistance);
+            if (currentSort === 'distance') {
+                activeList.sort((a, b) => a.calculatedDistance - b.calculatedDistance);
             } else if (currentSort === 'benzin') {
-                combinedStations.sort((a, b) => {
-                    if (a.isEv) return 1; if (b.isEv) return -1;
-                    return (parseFloat(a.benzin_price) || 999) - (parseFloat(b.benzin_price) || 999);
-                });
+                activeList.sort((a, b) => (parseFloat(a.benzin_price) || 999) - (parseFloat(b.benzin_price) || 999));
             } else if (currentSort === 'motorin') {
-                combinedStations.sort((a, b) => {
-                    if (a.isEv) return 1; if (b.isEv) return -1;
-                    return (parseFloat(a.motorin_price) || 999) - (parseFloat(b.motorin_price) || 999);
-                });
+                activeList.sort((a, b) => (parseFloat(a.motorin_price) || 999) - (parseFloat(b.motorin_price) || 999));
             } else if (currentSort === 'lpg') {
-                combinedStations.sort((a, b) => {
-                    if (a.isEv) return 1; if (b.isEv) return -1;
-                    return (parseFloat(a.lpg_price) || 999) - (parseFloat(b.lpg_price) || 999);
-                });
+                activeList.sort((a, b) => (parseFloat(a.lpg_price) || 999) - (parseFloat(b.lpg_price) || 999));
             }
 
-            if (combinedStations.length === 0) {
-                list.innerHTML = '<div class="card" style="text-align:center;">Seçilen kriterde istasyon kaydı bulunamadı.</div>';
+            if (activeList.length === 0) {
+                list.innerHTML = `<div class="card" style="text-align:center;">Seçilen kriterde ${currentAppMode === 'gas' ? 'akaryakıt' : 'şarj'} istasyonu kaydı bulunamadı.</div>`;
                 return;
             }
 
-            combinedStations.forEach((st, index) => {
+            activeList.forEach((st, index) => {
                 const distText = st.calculatedDistance === 9999 ? "Konum girilmedi" : (st.calculatedDistance < 1 ? Math.round(st.calculatedDistance * 1000) + " m" : st.calculatedDistance.toFixed(1) + " km");
                 const brandName = st.brand ? `${st.brand} - ${st.name || ''}` : (st.name || 'İstasyon');
                 
@@ -1177,7 +1239,8 @@
 
                 let marker = null;
                 if (stLat && stLng && stLat !== 0 && stLng !== 0) {
-                    marker = L.marker([stLat, stLng], { icon: st.isEv ? greenIcon : redIcon }).addTo(map)
+                    // MAVİ PIN: Akaryakıt, YEŞİL PIN: Şarj İstasyonu
+                    marker = L.marker([stLat, stLng], { icon: st.isEv ? evGreenIcon : defaultBlueIcon }).addTo(map)
                         .bindPopup(`
                             <div style="text-align:center;">
                                 <b>${brandName}</b><br>
@@ -1219,7 +1282,7 @@
                         </div>
                     `;
                 } else {
-                    // Normal Akaryakıt İstasyonu Kartı (0 ve boşlar '-' yapılır)
+                    // Normal Akaryakıt İstasyonu Kartı
                     const benzinVal = (st.benzin_price && parseFloat(st.benzin_price) > 0) ? `${st.benzin_price} ₺` : '-';
                     const motorinVal = (st.motorin_price && parseFloat(st.motorin_price) > 0) ? `${st.motorin_price} ₺` : '-';
                     const lpgVal = (st.lpg_price && parseFloat(st.lpg_price) > 0) ? `${st.lpg_price} ₺` : '-';
