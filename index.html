@@ -168,7 +168,7 @@
 
     <header>
         <div style="width: 30px;"></div>
-        <div class="header-title" onclick="handleHeaderSecretClick()" title="Yönetim Paneli">⛽ Afyon Akaryakıt</div>
+        <div class="header-title" onclick="handleHeaderSecretClick()" title="Yönetim Paneli">⛽ Afyon Akaryakıt & Şarj</div>
         <button class="info-icon-btn" onclick="openModal()" title="Yasal Uyarı & Gizlilik">ℹ</button>
     </header>
 
@@ -213,7 +213,7 @@
             <button class="filter-btn" onclick="setSort('benzin', this)">⛽ En Ucuz Benzin</button>
             <button class="filter-btn" onclick="setSort('motorin', this)">🚜 En Ucuz Motorin</button>
             <button class="filter-btn" onclick="setSort('lpg', this)">🔥 En Ucuz LPG</button>
-            <button class="filter-btn" onclick="setSort('ev', this)" style="background:#d1fae5; color:#065f46;">⚡ Şarj İstasyonları</button>
+            <button class="filter-btn" onclick="setSort('ev', this)" style="background:#d1fae5; color:#065f46; border:1px solid #10b981;">⚡ Şarj İstasyonları</button>
         </div>
         
         <!-- MESAFE BİLGİLENDİRME NOTU -->
@@ -1196,7 +1196,7 @@
 
                 if (st.isEv) {
                     // Elektrikli Şarj Kartı Tasarımı
-                    const priceKwStr = st.price_kwh ? `${st.price_kwh} ₺/kWh` : '-';
+                    const priceKwStr = (st.price_kwh && parseFloat(st.price_kwh) > 0) ? `${st.price_kwh} ₺/kWh` : '-';
                     const socketStr = st.socket_types || 'CCS2 / Type 2';
                     const powerStr = st.power_kw || 'Hızlı Şarj (DC)';
 
@@ -1219,10 +1219,10 @@
                         </div>
                     `;
                 } else {
-                    // Normal Akaryakıt İstasyonu Kartı
-                    const benzinVal = st.benzin_price ? `${st.benzin_price} ₺` : '-';
-                    const motorinVal = st.motorin_price ? `${st.motorin_price} ₺` : '-';
-                    const lpgVal = st.lpg_price ? `${st.lpg_price} ₺` : '-';
+                    // Normal Akaryakıt İstasyonu Kartı (0 ve boşlar '-' yapılır)
+                    const benzinVal = (st.benzin_price && parseFloat(st.benzin_price) > 0) ? `${st.benzin_price} ₺` : '-';
+                    const motorinVal = (st.motorin_price && parseFloat(st.motorin_price) > 0) ? `${st.motorin_price} ₺` : '-';
+                    const lpgVal = (st.lpg_price && parseFloat(st.lpg_price) > 0) ? `${st.lpg_price} ₺` : '-';
 
                     const ratingVal = st.avgRating ? parseFloat(st.avgRating).toFixed(1) : '0.0';
                     const ratingBadgeHtml = st.totalReviews > 0 
