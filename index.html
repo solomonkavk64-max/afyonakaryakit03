@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Afyonkarahisar Akaryakıt ve Şarj Takip</title>
     
-    <!-- PWABuilder ve Play Store İçin Manifest Bağlantısı -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#d9534f">
 
@@ -42,14 +41,6 @@
 
         #map { height: 40vh; width: 100%; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); }
         
-        .leaflet-popup, .leaflet-popup-content-wrapper, .leaflet-popup-tip, .leaflet-container .leaflet-popup-content-wrapper {
-            background: transparent !important;
-            box-shadow: none !important;
-            border: none !important;
-            padding: 0 !important;
-        }
-        .leaflet-popup-tip-container { display: none !important; }
-
         .container { padding: 16px; max-width: 600px; margin: auto; padding-bottom: 40px; }
         
         #newsBanner { display: none; background: #eff6ff; border: 1px solid #bfdbfe; border-left: 5px solid #2563eb; padding: 15px; border-radius: 12px; margin-bottom: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); cursor: pointer; transition: transform 0.1s ease, box-shadow 0.1s ease; }
@@ -151,7 +142,6 @@
         .modal-header h3 { margin: 0; font-size: 16px; color: #0f172a; }
         .close-btn { background: none; border: none; font-size: 20px; font-weight: bold; color: #64748b; cursor: pointer; }
         .modal-body { font-size: 13px; color: #334155; line-height: 1.6; max-height: 65vh; overflow-y: auto; }
-        .modal-body h4 { color: #0f172a; margin-top: 12px; margin-bottom: 4px; font-size: 13px; }
         
         .star-rating-container { display: flex; justify-content: center; gap: 8px; font-size: 32px; margin: 12px 0; color: #cbd5e1; pointer-events: none; }
         .star-rating-container .star.active { color: #f59e0b; }
@@ -218,13 +208,13 @@
         <!-- ANA MOD SEÇİMİ (AKARYAKIT / ŞARJ) -->
         <div class="mode-switch-container">
             <button id="modeGasBtn" class="mode-btn active-gas" onclick="switchMode('gas')">⛽ Akaryakıt İstasyonları</button>
-            <button id="modeEvBtn" class="mode-btn" onclick="switchMode('ev')">⚡ Şarj İstasyonları</button>
+            <button id="modeEvBtn" class="mode-btn" onclick="switchMode('ev')">⚡ Şarj İstasyonları (Trugo, Tesla, ZES, WAT)</button>
         </div>
 
         <!-- İLÇE SEÇİM DROPDOWN -->
         <select id="districtSelect" class="district-select" onchange="filterAndRender()">
-            <option value="TÜMÜ">📍 TÜM AFYONKARAHİSAR (18 İlçe)</option>
-            <option value="MERKEZ" selected>🏙️ MERKEZ</option>
+            <option value="TÜMÜ" selected>📍 TÜM AFYONKARAHİSAR (18 İlçe)</option>
+            <option value="MERKEZ">🏙️ MERKEZ</option>
             <option value="BAŞMAKÇI">🏡 BAŞMAKÇI</option>
             <option value="BAYAT">🏡 BAYAT</option>
             <option value="BOLVADİN">🏡 BOLVADİN</option>
@@ -254,7 +244,6 @@
             <button class="filter-btn" onclick="setSort('lpg', this)">🔥 En Ucuz LPG</button>
         </div>
         
-        <!-- MESAFE BİLGİLENDİRME NOTU -->
         <div class="distance-info-note">ℹ️ Gösterilen mesafeler yaklaşık olup trafik ve güzergaha göre değişiklik gösterebilir.</div>
 
         <div class="action-bar">
@@ -411,7 +400,6 @@
                 <input type="hidden" id="ratingStationId">
                 <p style="margin-top:0; font-weight:bold; color:#0f172a; text-align:center;" id="ratingStationName"></p>
                 
-                <!-- Otomatik Güncellenen Yıldız Göstergesi -->
                 <div class="star-rating-container" id="starContainer">
                     <span class="star" data-value="1">&#9733;</span>
                     <span class="star" data-value="2">&#9733;</span>
@@ -421,19 +409,16 @@
                 </div>
                 <div style="text-align:center; font-size:13px; font-weight:bold; color:#f59e0b; margin-bottom:12px;" id="starText">Çok İyi (5 / 5)</div>
 
-                <!-- Temizlik Slider -->
                 <div class="rating-slider-group">
                     <label><span>🧼 Tuvalet & Temizlik</span> <span id="cleanlinessValLabel">5/5</span></label>
                     <input type="range" id="cleanlinessInput" min="1" max="5" value="5" oninput="updateRatingFromSliders()">
                 </div>
 
-                <!-- Hizmet Kalitesi Slider -->
                 <div class="rating-slider-group">
                     <label><span>👨‍🔧 Personel & Hizmet</span> <span id="serviceValLabel">5/5</span></label>
                     <input type="range" id="serviceInput" min="1" max="5" value="5" oninput="updateRatingFromSliders()">
                 </div>
 
-                <!-- Yorum Alanı -->
                 <div style="margin-bottom: 12px;">
                     <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:4px;">Yorumunuz (Opsiyonel):</label>
                     <textarea id="ratingComment" class="search-box" rows="2" placeholder="İstasyon deneyiminizi yazın..." style="resize:none;"></textarea>
@@ -444,7 +429,7 @@
         </div>
     </div>
 
-    <!-- YORUMLARI VE DEĞERLENDİRMELERİ İNCELEME MODALI -->
+    <!-- YORUMLARI İNCELEME MODALI -->
     <div id="commentsModal" class="modal-overlay" onclick="handleCommentsOutsideClick(event)">
         <div class="modal-box">
             <div class="modal-header">
@@ -522,12 +507,10 @@
         let userLat = 38.7569;
         let userLng = 30.5387;
         
-        let currentAppMode = 'gas'; // 'gas' veya 'ev'
+        let currentAppMode = 'gas';
         let currentSort = 'distance';
-
         let currentSelectedRating = 5;
 
-        // Gizli Admin Tıklama Takibi
         let adminClickCount = 0;
         let adminClickTimer = null;
 
@@ -567,7 +550,6 @@
         async function loadPendingReports() {
             const container = document.getElementById('adminReportsContainer');
             container.innerHTML = '<div style="text-align:center; padding:20px; color:#64748b;">Yükleniyor...</div>';
-
             try {
                 const { data, error } = await _supabase
                     .from('price_reports')
@@ -576,7 +558,6 @@
                     .order('created_at', { ascending: false });
 
                 if (error) throw error;
-
                 if (!data || data.length === 0) {
                     container.innerHTML = '<div style="text-align:center; padding:25px; color:#10b981; font-weight:bold;">🎉 Onay bekleyen yeni rapor bulunmuyor!</div>';
                     return;
@@ -585,7 +566,6 @@
                 container.innerHTML = '';
                 data.forEach(item => {
                     const dateStr = item.created_at ? new Date(item.created_at).toLocaleDateString('tr-TR') + " " + new Date(item.created_at).toLocaleTimeString('tr-TR', {hour: '2-digit', minute:'2-digit'}) : '';
-                    
                     let photoHtml = '<i style="color:#94a3b8; font-size:11px;">Fotoğraf yüklenmemiş</i>';
                     if (item.photo_url) {
                         const { data: pubData } = _supabase.storage.from('station-photos').getPublicUrl(item.photo_url);
@@ -612,7 +592,6 @@
                             </div>
                             ${item.note ? `<div style="font-size:12px; color:#475569; margin-bottom:8px;">📝 <b>Not:</b> ${item.note}</div>` : ''}
                             <div style="margin-bottom:10px;">${photoHtml}</div>
-                            
                             <div style="display:flex; gap:8px;">
                                 <button class="btn" style="background:#10b981; padding:10px; font-size:12px;" onclick="approveReport(${item.id}, ${stId}, ${benzin}, ${motorin}, ${lpg})">✅ Onayla & Fiyatı Güncelle</button>
                                 <button class="report-btn" style="background:#ef4444; color:white; border:none; padding:10px; font-size:12px;" onclick="rejectReport(${item.id})">❌ Reddet / Sil</button>
@@ -621,93 +600,55 @@
                     `;
                 });
             } catch (e) {
-                console.error("Raporlar çekilirken hata:", e);
                 container.innerHTML = '<div style="text-align:center; padding:15px; color:#dc2626;">Raporlar yüklenirken hata oluştu.</div>';
             }
         }
 
         async function approveReport(reportId, stationId, benzin, motorin, lpg) {
             if (!confirm("Bu raporu onaylamak ve istasyon fiyatlarını güncellemek istiyor musunuz?")) return;
-
             try {
                 if (stationId) {
                     let updateData = {};
                     if (benzin !== null) updateData.benzin_price = benzin;
                     if (motorin !== null) updateData.motorin_price = motorin;
                     if (lpg !== null) updateData.lpg_price = lpg;
-
-                    const { error: updateError } = await _supabase
-                        .from('gas_stations')
-                        .update(updateData)
-                        .eq('id', stationId);
-
-                    if (updateError) throw updateError;
+                    await _supabase.from('gas_stations').update(updateData).eq('id', stationId);
                 }
-                const { error: reportError } = await _supabase
-                    .from('price_reports')
-                    .update({ is_approved: true })
-                    .eq('id', reportId);
-
-                if (reportError) throw reportError;
-
+                await _supabase.from('price_reports').update({ is_approved: true }).eq('id', reportId);
                 alert("Rapor başarıyla onaylandı ve fiyatlar güncellendi! 🚀");
                 document.getElementById(`report-card-${reportId}`).remove();
-                
-                const container = document.getElementById('adminReportsContainer');
-                if (container.children.length === 0) {
-                    container.innerHTML = '<div style="text-align:center; padding:25px; color:#10b981; font-weight:bold;">🎉 Onay bekleyen yeni rapor bulunmuyor!</div>';
-                }
             } catch (e) {
-                console.error("Onaylama hatası:", e.message);
                 alert("İşlem sırasında hata oluştu: " + e.message);
             }
         }
 
         async function rejectReport(reportId) {
             if (!confirm("Bu raporu reddetmek/silmek istediğinize emin misiniz?")) return;
-
             try {
-                const { error } = await _supabase
-                    .from('price_reports')
-                    .delete()
-                    .eq('id', reportId);
-
-                if (error) throw error;
-
+                await _supabase.from('price_reports').delete().eq('id', reportId);
                 alert("Rapor silindi.");
                 document.getElementById(`report-card-${reportId}`).remove();
             } catch (e) {
-                console.error("Silme hatası:", e.message);
                 alert("Silinirken hata oluştu.");
             }
         }
 
-        // ESKİ SİSTEMDEKİ LEAFLET STANDART MAVİ VE YEŞİL DAMLA PİNLERİ
         const defaultBlueIcon = new L.Icon({
             iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
             shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-            iconSize: [25, 41],
-            iconAnchor: [12, 41],
-            popupAnchor: [1, -34],
-            shadowSize: [41, 41]
+            iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
         });
 
         const evGreenIcon = new L.Icon({
             iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
             shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-            iconSize: [25, 41],
-            iconAnchor: [12, 41],
-            popupAnchor: [1, -34],
-            shadowSize: [41, 41]
+            iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
         });
 
         const userRedIcon = new L.Icon({
             iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
             shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-            iconSize: [25, 41],
-            iconAnchor: [12, 41],
-            popupAnchor: [1, -34],
-            shadowSize: [41, 41]
+            iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
         });
 
         window.onload = function() {
@@ -721,7 +662,6 @@
             setTimeout(requestNotificationPermission, 2000);
         };
 
-        // Çerez (Cookie) Yardımcı Fonksiyonları
         function setCookie(name, value, days) {
             let expires = "";
             if (days) {
@@ -757,25 +697,18 @@
 
         async function loadNews() {
             try {
-                const { data } = await _supabase
-                    .from('news')
-                    .select('*')
-                    .order('id', { ascending: false });
-
+                const { data } = await _supabase.from('news').select('*').order('id', { ascending: false });
                 if (data && data.length > 0) {
                     fetchedNewsList = data;
                     displayNewsBanner(data[0]);
                     renderNewsModalList(data);
                 }
-            } catch (e) {
-                console.error("Duyurular yüklenirken hata:", e);
-            }
+            } catch (e) {}
         }
 
         function displayNewsBanner(news) {
             document.getElementById("bannerTitle").textContent = "📢 " + news.title;
             document.getElementById("bannerContent").textContent = news.content || "Detaylar için tıklayın...";
-            
             if(news.created_at) {
                 const dateObj = new Date(news.created_at);
                 document.getElementById("newsDate").textContent = "Yayınlanma: " + dateObj.toLocaleDateString('tr-TR') + " " + dateObj.toLocaleTimeString('tr-TR', {hour: '2-digit', minute:'2-digit'});
@@ -786,15 +719,8 @@
         function renderNewsModalList(newsList) {
             const container = document.getElementById("allNewsContainer");
             container.innerHTML = "";
-
-            if (!newsList || newsList.length === 0) {
-                container.innerHTML = '<div style="text-align:center; padding:20px; color:#64748b;">Güncel akaryakıt haberi bulunamadı.</div>';
-                return;
-            }
-
             newsList.forEach((item, index) => {
                 const dateStr = item.created_at ? new Date(item.created_at).toLocaleDateString('tr-TR') + " " + new Date(item.created_at).toLocaleTimeString('tr-TR', {hour: '2-digit', minute:'2-digit'}) : "";
-                
                 container.innerHTML += `
                     <div class="news-item-card" onclick="openNewsDetailByIndex(${index})">
                         <div class="news-item-title">📰 ${item.title}</div>
@@ -808,21 +734,12 @@
         function openNewsDetailByIndex(index) {
             const news = fetchedNewsList[index];
             if (!news) return;
-
             const dateStr = news.created_at ? new Date(news.created_at).toLocaleDateString('tr-TR') + " " + new Date(news.created_at).toLocaleTimeString('tr-TR', {hour: '2-digit', minute:'2-digit'}) : "";
-
             document.getElementById('detailModalTitle').textContent = news.title;
             document.getElementById('detailModalDate').textContent = "⏱ Yayınlanma: " + dateStr;
             document.getElementById('detailModalContent').textContent = news.content || "Haber içeriği bulunmuyor.";
-            
             const linkBtn = document.getElementById('detailModalLink');
-            if (news.url) {
-                linkBtn.href = news.url;
-                linkBtn.style.display = "block";
-            } else {
-                linkBtn.style.display = "none";
-            }
-
+            if (news.url) { linkBtn.href = news.url; linkBtn.style.display = "block"; } else { linkBtn.style.display = "none"; }
             closeNewsModal();
             document.getElementById('newsDetailModal').classList.add('open');
         }
@@ -868,19 +785,15 @@
         function updateRatingFromSliders() {
             const cleanliness = parseInt(document.getElementById('cleanlinessInput').value);
             const service = parseInt(document.getElementById('serviceInput').value);
-            
             document.getElementById('cleanlinessValLabel').textContent = cleanliness + '/5';
             document.getElementById('serviceValLabel').textContent = service + '/5';
-
             const avg = Math.round((cleanliness + service) / 2);
             currentSelectedRating = avg;
-
             const stars = document.querySelectorAll('#starContainer .star');
             stars.forEach((star, idx) => {
                 if (idx < avg) star.classList.add('active');
                 else star.classList.remove('active');
             });
-
             const texts = ["", "Çok Zayıf (1 / 5)", "Zayıf (2 / 5)", "Orta (3 / 5)", "İyi (4 / 5)", "Çok İyi (5 / 5)"];
             document.getElementById('starText').textContent = texts[avg] || (avg + " / 5");
         }
@@ -890,26 +803,17 @@
             const container = document.getElementById('commentsContainer');
             container.innerHTML = '<div style="text-align:center; padding:15px; color:#64748b;">Değerlendirmeler yükleniyor...</div>';
             document.getElementById('commentsModal').classList.add('open');
-
             try {
-                const { data, error } = await _supabase
-                    .from('station_ratings')
-                    .select('*')
-                    .eq('station_id', stationId)
-                    .order('created_at', { ascending: false });
-
+                const { data, error } = await _supabase.from('station_ratings').select('*').eq('station_id', stationId).order('created_at', { ascending: false });
                 if (error) throw error;
-
                 if (!data || data.length === 0) {
                     container.innerHTML = '<div style="text-align:center; padding:15px; color:#64748b;">Henüz yapılmış bir yorum bulunmuyor.</div>';
                     return;
                 }
-
                 container.innerHTML = '';
                 data.forEach(item => {
                     const dateStr = item.created_at ? new Date(item.created_at).toLocaleDateString('tr-TR') : '';
                     const commentText = item.comment ? item.comment : '<i>(Yorum yapılmadı, sadece puan verildi)</i>';
-
                     container.innerHTML += `
                         <div style="background:#f8fafc; border:1px solid #e2e8f0; padding:12px; border-radius:10px; margin-bottom:10px;">
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
@@ -925,7 +829,6 @@
                     `;
                 });
             } catch (e) {
-                console.error("Yorumlar çekilirken hata:", e);
                 container.innerHTML = '<div style="text-align:center; padding:15px; color:#dc2626;">Yorumlar yüklenirken bir hata oluştu.</div>';
             }
         }
@@ -939,39 +842,20 @@
             const service = parseInt(document.getElementById('serviceInput').value);
             const comment = document.getElementById('ratingComment').value.trim();
             const deviceId = getDeviceId();
-
             if (!stationId) return;
-
             try {
                 submitBtn.disabled = true;
                 submitBtn.textContent = "Kaydediliyor...";
-
                 const { error } = await _supabase.from('station_ratings').insert([{
-                    station_id: stationId,
-                    user_device_id: deviceId,
-                    rating: currentSelectedRating,
-                    cleanliness_rating: cleanliness,
-                    service_rating: service,
-                    comment: comment
+                    station_id: stationId, user_device_id: deviceId, rating: currentSelectedRating,
+                    cleanliness_rating: cleanliness, service_rating: service, comment: comment
                 }]);
-
                 if (error) {
-                    if (error.code === '23505') {
-                        alert("Bu istasyon için daha önce değerlendirme yaptınız.");
-                        userRatingsMap[String(stationId)] = true;
-                        closeRatingModal();
-                        loadData();
-                    } else {
-                        throw error;
-                    }
-                } else {
-                    alert("Değerlendirmeniz için teşekkür ederiz! ⭐");
-                    userRatingsMap[String(stationId)] = true;
-                    closeRatingModal();
-                    loadData();
-                }
+                    if (error.code === '23505') { alert("Bu istasyon için daha önce değerlendirme yaptınız."); } else { throw error; }
+                } else { alert("Değerlendirmeniz için teşekkür ederiz! ⭐"); }
+                closeRatingModal();
+                loadData();
             } catch (err) {
-                console.error("Puan kaydetme hatası:", err);
                 alert("Puan kaydedilirken bir hata oluştu.");
             } finally {
                 submitBtn.disabled = false;
@@ -994,50 +878,33 @@
                 alert("Lütfen en az bir fiyat, açıklama veya tabela fotoğrafı ekleyiniz.");
                 return;
             }
-
             if (!legalConsent.checked) {
                 alert("Devam edebilmek için lütfen yasal bildirim ve onay kutusunu işaretleyiniz.");
                 return;
             }
 
             let photoUrl = null;
-
             try {
                 submitBtn.disabled = true;
                 submitBtn.textContent = "Gönderiliyor...";
-
                 if (photoInput.files && photoInput.files.length > 0) {
                     const file = photoInput.files[0];
-                    if (file.size > 5242880) {
-                        alert("Yükleyeceğiniz fotoğraf 5 MB'tan büyük olamaz.");
-                        submitBtn.disabled = false;
-                        submitBtn.textContent = "Gönder";
-                        return;
-                    }
+                    if (file.size > 5242880) { alert("Yükleyeceğiniz fotoğraf 5 MB'tan büyük olamaz."); submitBtn.disabled = false; submitBtn.textContent = "Gönder"; return; }
                     const fileExt = file.name.split('.').pop();
                     const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
                     const { error: uploadError } = await _supabase.storage.from('station-photos').upload(fileName, file);
                     if (uploadError) throw uploadError;
                     photoUrl = fileName;
                 }
-
                 const { error } = await _supabase.from('price_reports').insert([{ 
-                    station_id: stationId ? stationId : null, 
-                    station_name: stationName,
-                    reported_benzin: benzin, 
-                    reported_motorin: motorin, 
-                    reported_lpg: lpg,
-                    note: note,
-                    photo_url: photoUrl,
-                    is_approved: false
+                    station_id: stationId ? stationId : null, station_name: stationName,
+                    reported_benzin: benzin, reported_motorin: motorin, reported_lpg: lpg,
+                    note: note, photo_url: photoUrl, is_approved: false
                 }]);
-
                 if (error) throw error;
-
                 alert("Bildiriminiz yönetici onayına gönderilmiştir. Teşekkür ederiz!");
                 closeReportModal();
             } catch (err) {
-                console.error("Bildirim gönderme hatası:", err);
                 alert("Bildirim gönderilirken bir hata oluştu.");
             } finally {
                 submitBtn.disabled = false;
@@ -1048,7 +915,6 @@
         function initApp() {
             const status = document.getElementById('status');
             status.innerHTML = "GPS konumunuz alınıyor...";
-
             if (!navigator.geolocation) {
                 status.innerHTML = "Tarayıcınız konum desteklemiyor. Afyon merkez baz alınıyor.";
                 loadData();
@@ -1077,16 +943,19 @@
             const gasBtn = document.getElementById('modeGasBtn');
             const evBtn = document.getElementById('modeEvBtn');
             const gasFilterBar = document.getElementById('gasFilterBar');
+            const districtSelect = document.getElementById('districtSelect');
 
             if (mode === 'gas') {
                 gasBtn.className = 'mode-btn active-gas';
                 evBtn.className = 'mode-btn';
                 gasFilterBar.style.display = 'flex';
+                districtSelect.value = 'MERKEZ';
                 currentSort = 'distance';
             } else {
                 evBtn.className = 'mode-btn active-ev';
                 gasBtn.className = 'mode-btn';
                 gasFilterBar.style.display = 'none';
+                districtSelect.value = 'TÜMÜ';
                 currentSort = 'distance';
             }
             filterAndRender();
@@ -1097,7 +966,6 @@
             list.innerHTML = '<div style="text-align:center; padding: 20px;">Veriler yükleniyor...</div>';
             
             const deviceId = getDeviceId();
-
             const [stationsRes, evStationsRes, ratingsRes, myRatingsRes] = await Promise.all([
                 _supabase.from('gas_stations').select('*'),
                 _supabase.from('ev_charging_stations').select('*'),
@@ -1114,18 +982,10 @@
             rawEvStations = evStationsRes.data || [];
             
             stationRatingsMap = {};
-            if (ratingsRes.data) {
-                ratingsRes.data.forEach(r => {
-                    stationRatingsMap[r.station_id] = r;
-                });
-            }
+            if (ratingsRes.data) { ratingsRes.data.forEach(r => { stationRatingsMap[r.station_id] = r; }); }
 
             userRatingsMap = {};
-            if (myRatingsRes.data) {
-                myRatingsRes.data.forEach(r => {
-                    userRatingsMap[String(r.station_id)] = true;
-                });
-            }
+            if (myRatingsRes.data) { myRatingsRes.data.forEach(r => { userRatingsMap[String(r.station_id)] = true; }); }
 
             filterAndRender();
         }
@@ -1165,35 +1025,29 @@
             let activeList = [];
 
             if (currentAppMode === 'gas') {
-                // Akaryakıt İstasyonları Listesi
                 activeList = rawStations.map(st => {
                     const stLat = parseFloat(st.latitude) || 0;
                     const stLng = parseFloat(st.longitude) || 0;
                     const ratingObj = stationRatingsMap[st.id] || { avg_rating: 0, total_reviews: 0 };
                     return { 
-                        ...st, 
-                        isEv: false,
+                        ...st, isEv: false,
                         calculatedDistance: calculateDistance(userLat, userLng, stLat, stLng),
                         avgRating: ratingObj.avg_rating || 0,
                         totalReviews: ratingObj.total_reviews || 0
                     };
                 });
             } else {
-                // Elektrikli Şarj İstasyonları Listesi
                 activeList = rawEvStations.map(ev => {
                     const evLat = parseFloat(ev.latitude) || 0;
                     const evLng = parseFloat(ev.longitude) || 0;
                     return {
-                        ...ev,
-                        isEv: true,
+                        ...ev, isEv: true,
                         calculatedDistance: calculateDistance(userLat, userLng, evLat, evLng),
-                        avgRating: 0,
-                        totalReviews: 0
+                        avgRating: 0, totalReviews: 0
                     };
                 });
             }
 
-            // İlçe Filtrelemesi
             if (selectedDistrict !== 'TÜMÜ') {
                 activeList = activeList.filter(st => {
                     const stDistrict = (st.district || '').toUpperCase();
@@ -1203,7 +1057,6 @@
                 });
             }
 
-            // Arama Kutusu Filtrelemesi
             if (searchVal.trim() !== '') {
                 activeList = activeList.filter(st => 
                     (st.name && st.name.toLowerCase().includes(searchVal)) ||
@@ -1213,7 +1066,6 @@
                 );
             }
 
-            // Sıralama
             if (currentSort === 'distance') {
                 activeList.sort((a, b) => a.calculatedDistance - b.calculatedDistance);
             } else if (currentSort === 'benzin') {
@@ -1239,7 +1091,6 @@
 
                 let marker = null;
                 if (stLat && stLng && stLat !== 0 && stLng !== 0) {
-                    // MAVİ PIN: Akaryakıt, YEŞİL PIN: Şarj İstasyonu
                     marker = L.marker([stLat, stLng], { icon: st.isEv ? evGreenIcon : defaultBlueIcon }).addTo(map)
                         .bindPopup(`
                             <div style="text-align:center;">
@@ -1258,7 +1109,6 @@
                 const currentMarkerIndex = stationMarkers.length - 1;
 
                 if (st.isEv) {
-                    // Elektrikli Şarj Kartı Tasarımı
                     const priceKwStr = (st.price_kwh && parseFloat(st.price_kwh) > 0) ? `${st.price_kwh} ₺/kWh` : '-';
                     const socketStr = st.socket_types || 'CCS2 / Type 2';
                     const powerStr = st.power_kw || 'Hızlı Şarj (DC)';
@@ -1272,9 +1122,9 @@
                             <div class="station-address">📍 ${st.address || ''}</div>
                             <div class="ev-badge">⚡ Elektrikli Araç Şarj Noktası</div>
                             <div class="prices">
-                                <div class="price-item"><div class="price-label">Soket Tipi</div><div class="price-val ev-val" style="font-size:12px;">${socketStr}</div></div>
-                                <div class="price-item"><div class="price-label">Şarj Gücü</div><div class="price-val ev-val" style="font-size:12px;">${powerStr}</div></div>
-                                <div class="price-item"><div class="price-label">Birim Ücret</div><div class="price-val ev-val">${priceKwStr}</div></div>
+                                <div class="price-item"><div class="price-label">Soket Tipi</div><div class="price-val ev-val" style="font-size:11px;">${socketStr}</div></div>
+                                <div class="price-item"><div class="price-label">Şarj Gücü</div><div class="price-val ev-val" style="font-size:11px;">${powerStr}</div></div>
+                                <div class="price-item"><div class="price-label">Birim Ücret</div><div class="price-val ev-val" style="font-size:12px;">${priceKwStr}</div></div>
                             </div>
                             <div class="card-buttons">
                                 <a class="route-btn" style="text-align:center; text-decoration:none; display:block; flex:1;" href="${geoUrl}" onclick="event.stopPropagation()">🧭 Yol Tarifi Al</a>
@@ -1282,16 +1132,13 @@
                         </div>
                     `;
                 } else {
-                    // Normal Akaryakıt İstasyonu Kartı
                     const benzinVal = (st.benzin_price && parseFloat(st.benzin_price) > 0) ? `${st.benzin_price} ₺` : '-';
                     const motorinVal = (st.motorin_price && parseFloat(st.motorin_price) > 0) ? `${st.motorin_price} ₺` : '-';
                     const lpgVal = (st.lpg_price && parseFloat(st.lpg_price) > 0) ? `${st.lpg_price} ₺` : '-';
 
                     const ratingVal = st.avgRating ? parseFloat(st.avgRating).toFixed(1) : '0.0';
                     const ratingBadgeHtml = st.totalReviews > 0 
-                        ? `<div class="station-rating-badge" onclick="event.stopPropagation(); openCommentsModal('${st.id}', '${brandName.replace(/'/g, "\\'")}')" style="cursor:pointer;">
-                            ⭐ ${ratingVal} <span style="font-weight:normal; color:#78350f;">(${st.totalReviews} değerlendirme - Detaylar)</span>
-                           </div>`
+                        ? `<div class="station-rating-badge" onclick="event.stopPropagation(); openCommentsModal('${st.id}', '${brandName.replace(/'/g, "\\'")}')" style="cursor:pointer;">⭐ ${ratingVal} <span style="font-weight:normal; color:#78350f;">(${st.totalReviews} değerlendirme)</span></div>`
                         : `<div class="station-rating-badge" style="color:#64748b; background:#f1f5f9;">⭐ Henüz puanlanmadı</div>`;
 
                     const stIdStr = String(st.id);
@@ -1315,9 +1162,7 @@
                             </div>
                             <div class="card-buttons">
                                 ${rateButtonHtml}
-                                <button class="report-btn" onclick="event.stopPropagation(); openReportModal('${st.id || ''}', '${brandName.replace(/'/g, "\\'")}', '${st.benzin_price || '-'}', '${st.motorin_price || '-'}', '${st.lpg_price || '-'}')">
-                                    📝 Fiyat Bildir
-                                </button>
+                                <button class="report-btn" onclick="event.stopPropagation(); openReportModal('${st.id || ''}', '${brandName.replace(/'/g, "\\'")}', '${st.benzin_price || '-'}', '${st.motorin_price || '-'}', '${st.lpg_price || '-'}')">📝 Fiyat Bildir</button>
                             </div>
                         </div>
                     `;
