@@ -1,8 +1,10 @@
 [{
-      "relation": ["delegate_permission/common.handle_all_urls"],
-      "target": {
-        "namespace": "android_app",
-        "package_name": "com.afyonakaryakit03",
-        "sha256_cert_fingerprints": ["1B:B7:51:7F:2A:D4:90:C0:D1:3D:AC:55:D3:47:21:DD:8C:4A:DB:EA:BE:66:DA:B6:28:5D:D5:C6:46:CF:FB:30"]
-      }
-    }]
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "io.github.solomonkavk64_max.afyonakaryakit03",
+    "sha256_cert_fingerprints": [
+      "1B:B7:51:7F:2A:D4:90:C0:D1:30:AC:55:D3:47:21:D0:8C:4A:DB:EA:BE:66:DA:B6:28:50:D5:C6:46:CF:FB:30"
+    ]
+  }
+}]
