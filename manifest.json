@@ -1,7 +1,7 @@
 {
   "id": "/afyonakaryakit03/?source=pwa",
-  "name": "Afyon Akaryakıt Fiyatları",
-  "short_name": "Akaryakıt",
+  "name": "Afyon Akaryakıt & Şarj",
+  "short_name": "Afyon Akaryakıt & Şarj",
   "description": "Afyonkarahisar akaryakıt ve en yakın istasyon fiyatları uygulaması",
   "start_url": "/afyonakaryakit03/",
   "scope": "/afyonakaryakit03/",
@@ -12,12 +12,12 @@
   "categories": ["utilities", "navigation", "lifestyle"],
   "icons": [
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/2983/2983788.png",
+      "src": "https://solomonkavk64-max.github.io/afyonakaryakit03/icon-512.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/2983/2983788.png",
+      "src": "https://solomonkavk64-max.github.io/afyonakaryakit03/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
