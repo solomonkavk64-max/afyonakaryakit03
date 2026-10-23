@@ -1,5 +1,5 @@
 {
-  "id": "afyonakaryakit03-pwa",
+  "id": "/afyonakaryakit03/?source=pwa",
   "name": "Afyon Akaryakıt & Şarj",
   "short_name": "Afyon Akaryakıt & Şarj",
   "description": "Afyonkarahisar akaryakıt ve en yakın istasyon fiyatları uygulaması",
@@ -9,24 +9,29 @@
   "orientation": "portrait",
   "background_color": "#ffffff",
   "theme_color": "#d9534f",
+  "categories": [
+    "utilities",
+    "navigation",
+    "lifestyle"
+  ],
   "icons": [
     {
-      "src": "https://raw.githubusercontent.com/solomonkavk64-max/afyonakaryakit03/main/icon-512.png",
+      "src": "/afyonakaryakit03/icon-512.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "https://raw.githubusercontent.com/solomonkavk64-max/afyonakaryakit03/main/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "https://raw.githubusercontent.com/solomonkavk64-max/afyonakaryakit03/main/icon-512.png",
+      "src": "/afyonakaryakit03/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    },
+    {
+      "src": "/afyonakaryakit03/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
     }
   ]
 }
