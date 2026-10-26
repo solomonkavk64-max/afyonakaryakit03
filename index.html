@@ -538,38 +538,36 @@
 
         function closeAdminLoginModal() { document.getElementById('adminLoginModal').classList.remove('open'); }
         function handleAdminLoginOutsideClick(event) { if (event.target.id === 'adminLoginModal') closeAdminLoginModal(); }
+        
         async function verifyAdminPassword() {
-    const passInput = document.getElementById('adminPasswordInput').value.trim();
-    if (!passInput) {
-        alert("Lütfen şifre giriniz!");
-        return;
-    }
+            const passInput = document.getElementById('adminPasswordInput').value.trim();
+            if (!passInput) {
+                alert("Lütfen şifre giriniz!");
+                return;
+            }
 
-    try {
-        // Şifreyi kod yerine güvenli Supabase tablosundan sorguluyoruz
-        const { data, error } = await _supabase
-            .from('admin_settings')
-            .select('setting_value')
-            .eq('setting_key', 'admin_password')
-            .single();
+            try {
+                const { data, error } = await _supabase
+                    .from('admin_settings')
+                    .select('setting_value')
+                    .eq('setting_key', 'admin_password')
+                    .single();
 
-        if (error || !data) {
-            alert("Doğrulama sırasında bir hata oluştu!");
-            return;
+                if (error || !data) {
+                    alert("Doğrulama sırasında bir hata oluştu!");
+                    return;
+                }
+
+                if (passInput === data.setting_value) {
+                    closeAdminLoginModal();
+                    openAdminPanel();
+                } else {
+                    alert("Hatalı şifre!");
+                }
+            } catch (e) {
+                alert("Bağlantı hatası oluştu!");
+            }
         }
-
-        if (passInput === data.setting_value) {
-            closeAdminLoginModal();
-            openAdminPanel();
-        } else {
-            alert("Hatalı şifre!");
-        }
-    } catch (e) {
-        alert("Bağlantı hatası oluştu!");
-    }
-        }
-
-    
 
         async function openAdminPanel() {
             document.getElementById('adminPanelModal').classList.add('open');
@@ -787,7 +785,6 @@
         function closeModal() { document.getElementById('legalModal').classList.remove('open'); }
         function handleOutsideClick(event) { if (event.target.id === 'legalModal') closeModal(); }
 
-        // ORTAK FİYAT BİLDİR MODALI (İSTER AKARYAKIT, İSTER ŞARJ)
         function openReportModal(stationId, stationName, bVal, mVal, lVal, isEv = false) {
             document.getElementById('reportStationId').value = stationId;
             document.getElementById('reportStationName').textContent = stationName;
@@ -920,7 +917,7 @@
             
             const evPriceInput = parseFloat(document.getElementById('reportEvPrice').value);
             if (!isNaN(evPriceInput) && evPriceInput > 0) {
-                benzin = evPriceInput; // Şarj ücretini benzin sütunu üzerinden kaydediyoruz
+                benzin = evPriceInput;
             }
 
             const note = document.getElementById('reportNote').value.trim();
@@ -1216,6 +1213,7 @@
                             </div>
                             <div class="card-buttons">
                                 ${rateButtonHtml}
+                                <a class="route-btn" style="text-align:center; text-decoration:none; display:block; flex:1;" href="${geoUrl}" onclick="event.stopPropagation()">🧭 Yol Tarifi Al</a>
                                 <button class="report-btn" onclick="event.stopPropagation(); openReportModal('${st.id || ''}', '${brandName.replace(/'/g, "\\'")}', '${st.benzin_price || '-'}', '${st.motorin_price || '-'}', '${st.lpg_price || '-'}', false)">📝 Fiyat Bildir</button>
                             </div>
                         </div>
