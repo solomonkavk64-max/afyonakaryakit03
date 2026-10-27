@@ -88,6 +88,7 @@
         .filter-bar { display: flex; gap: 8px; margin-bottom: 8px; overflow-x: auto; padding-bottom: 4px; }
         .filter-btn { background: #e2e8f0; color: #334155; padding: 8px 12px; border: none; border-radius: 8px; font-size: 12px; font-weight: bold; cursor: pointer; white-space: nowrap; transition: 0.2s; }
         .filter-btn.active { background: #2563eb; color: white; }
+        .filter-btn.active-ev-filter { background: #10b981 !important; color: white !important; }
 
         .distance-info-note { font-size: 11px; color: #64748b; text-align: center; margin-bottom: 12px; font-style: italic; }
 
@@ -236,12 +237,12 @@
 
         <input type="text" id="searchInput" class="search-box" placeholder="🔍 İstasyon adı, marka, adres veya şarj tipi ara..." oninput="filterAndRender()">
 
-        <!-- AKARYAKIT SIRALAMA FİLTRELERİ -->
-        <div class="filter-bar" id="gasFilterBar">
+        <!-- SIRALAMA FİLTRELERİ (AKARYAKIT & ŞARJ İÇİN DİNAMİK) -->
+        <div class="filter-bar" id="filterBar">
             <button class="filter-btn active" onclick="setSort('distance', this)">📍 En Yakın</button>
-            <button class="filter-btn" onclick="setSort('benzin', this)">⛽ En Ucuz Benzin</button>
-            <button class="filter-btn" onclick="setSort('motorin', this)">🚜 En Ucuz Motorin</button>
-            <button class="filter-btn" onclick="setSort('lpg', this)">🔥 En Ucuz LPG</button>
+            <button class="filter-btn" onclick="setSort('benzin', this)" id="sortGas1">⛽ En Ucuz Benzin</button>
+            <button class="filter-btn" onclick="setSort('motorin', this)" id="sortGas2">🚜 En Ucuz Motorin</button>
+            <button class="filter-btn" onclick="setSort('lpg', this)" id="sortGas3">🔥 En Ucuz LPG</button>
         </div>
         
         <div class="distance-info-note">ℹ️ Gösterilen mesafeler yaklaşık olup trafik ve güzergaha göre değişiklik gösterebilir.</div>
@@ -992,21 +993,49 @@
             currentAppMode = mode;
             const gasBtn = document.getElementById('modeGasBtn');
             const evBtn = document.getElementById('modeEvBtn');
-            const gasFilterBar = document.getElementById('gasFilterBar');
             const districtSelect = document.getElementById('districtSelect');
+            
+            const sortGas1 = document.getElementById('sortGas1');
+            const sortGas2 = document.getElementById('sortGas2');
+            const sortGas3 = document.getElementById('sortGas3');
+            const firstFilterBtn = document.querySelector('#filterBar .filter-btn');
 
             if (mode === 'gas') {
                 gasBtn.className = 'mode-btn active-gas';
                 evBtn.className = 'mode-btn';
-                gasFilterBar.style.display = 'flex';
                 districtSelect.value = 'MERKEZ';
+                
+                // Akaryakıt filtrelerini göster
+                sortGas1.style.display = 'block';
+                sortGas2.style.display = 'block';
+                sortGas3.style.display = 'block';
+                sortGas1.textContent = '⛽ En Ucuz Benzin';
+                sortGas1.className = 'filter-btn';
+                sortGas2.className = 'filter-btn';
+                sortGas3.className = 'filter-btn';
+                
                 currentSort = 'distance';
+                if(firstFilterBtn) {
+                    document.querySelectorAll('#filterBar .filter-btn').forEach(b => b.classList.remove('active', 'active-ev-filter'));
+                    firstFilterBtn.classList.add('active');
+                }
             } else {
                 evBtn.className = 'mode-btn active-ev';
                 gasBtn.className = 'mode-btn';
-                gasFilterBar.style.display = 'none';
                 districtSelect.value = 'TÜMÜ';
+                
+                // Şarj filtrelerini ayarla (En Yakın ve En Ucuz Şarj)
+                sortGas1.style.display = 'block';
+                sortGas1.textContent = '⚡ En Ucuz Şarj (₺/kWh)';
+                sortGas1.className = 'filter-btn';
+                sortGas2.style.display = 'none';
+                sortGas3.style.display = 'none';
+                
                 currentSort = 'distance';
+                if(firstFilterBtn) {
+                    document.querySelectorAll('#filterBar .filter-btn').forEach(b => b.classList.remove('active', 'active-ev-filter'));
+                    firstFilterBtn.classList.add('active');
+                }
             }
             filterAndRender();
         }
@@ -1051,8 +1080,15 @@
 
         function setSort(sortType, btnElement) {
             currentSort = sortType;
-            document.querySelectorAll('#gasFilterBar .filter-btn').forEach(b => b.classList.remove('active'));
-            btnElement.classList.add('active');
+            document.querySelectorAll('#filterBar .filter-btn').forEach(b => {
+                b.classList.remove('active');
+                b.classList.remove('active-ev-filter');
+            });
+            if (currentAppMode === 'ev' && sortType === 'ev_price') {
+                btnElement.classList.add('active-ev-filter');
+            } else {
+                btnElement.classList.add('active');
+            }
             filterAndRender();
         }
 
@@ -1124,6 +1160,8 @@
                 activeList.sort((a, b) => (parseFloat(a.motorin_price) || 999) - (parseFloat(b.motorin_price) || 999));
             } else if (currentSort === 'lpg') {
                 activeList.sort((a, b) => (parseFloat(a.lpg_price) || 999) - (parseFloat(b.lpg_price) || 999));
+            } else if (currentSort === 'ev_price') {
+                activeList.sort((a, b) => (parseFloat(a.price_kwh) || 999) - (parseFloat(b.price_kwh) || 999));
             }
 
             if (activeList.length === 0) {
