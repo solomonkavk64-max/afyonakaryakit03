@@ -175,7 +175,7 @@
             color: #475569;
         }
 
-        .footer-link-container { text-align: center; margin-top: 25px; padding-top: 15px; border-top: 1px solid #e2e8f0; }
+        .footer-link-container { text-align: center; margin-top: 25px; padding-top: 15px; border-top: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 10px; }
         .footer-link-container button { background: none; border: none; color: #2563eb; font-size: 13px; font-weight: bold; cursor: pointer; text-decoration: underline; }
     </style>
 </head>
@@ -255,7 +255,33 @@
         <div id="list"></div>
 
         <div class="footer-link-container">
+            <button onclick="openSuggestionModal()" style="color: #10b981; font-weight: bold;">💬 Görüş, Öneri & Şikayet Bildir</button>
             <button onclick="openModal()">⚠ Yasal Uyarı, Gizlilik & Kullanım Şartları</button>
+        </div>
+    </div>
+
+    <!-- GÖRÜŞ VE ÖNERİ MODALI -->
+    <div id="suggestionModal" class="modal-overlay" onclick="handleSuggestionOutsideClick(event)">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>💬 Görüş ve Önerileriniz</h3>
+                <button class="close-btn" onclick="closeSuggestionModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <p style="margin-top:0; color:#64748b; font-size:12px;">Uygulamamızı geliştirmemiz için fikirlerinizi bizimle paylaşın:</p>
+                
+                <div style="margin-bottom: 12px;">
+                    <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:4px;">Adınız (Opsiyonel):</label>
+                    <input type="text" id="suggestionName" class="search-box" style="margin-bottom:0;" placeholder="Adınız Soyadınız">
+                </div>
+
+                <div style="margin-bottom: 12px;">
+                    <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:4px;">Görüş veya Öneriniz:</label>
+                    <textarea id="suggestionMessage" class="search-box" rows="4" placeholder="Fikirlerinizi buraya yazın..." style="resize:none; margin-bottom:0;"></textarea>
+                </div>
+
+                <button class="btn" id="submitSuggestionBtn" style="width:100%; margin-top:5px; background:#10b981;" onclick="submitSuggestion()">Öneriyi Gönder</button>
+            </div>
         </div>
     </div>
 
@@ -576,6 +602,54 @@
         }
 
         function closeAdminPanel() { document.getElementById('adminPanelModal').classList.remove('open'); loadData(); }
+
+        // --- GÖRÜŞ VE ÖNERİ FONKSİYONLARI ---
+        function openSuggestionModal() {
+            document.getElementById('suggestionName').value = '';
+            document.getElementById('suggestionMessage').value = '';
+            document.getElementById('suggestionModal').classList.add('open');
+        }
+
+        function closeSuggestionModal() {
+            document.getElementById('suggestionModal').classList.remove('open');
+        }
+
+        function handleSuggestionOutsideClick(event) {
+            if (event.target.id === 'suggestionModal') closeSuggestionModal();
+        }
+
+        async function submitSuggestion() {
+            const submitBtn = document.getElementById('submitSuggestionBtn');
+            const name = document.getElementById('suggestionName').value.trim();
+            const message = document.getElementById('suggestionMessage').value.trim();
+            const deviceId = getDeviceId();
+
+            if (!message) {
+                alert("Lütfen görüş veya önerinizi yazınız.");
+                return;
+            }
+
+            try {
+                submitBtn.disabled = true;
+                submitBtn.textContent = "Gönderiliyor...";
+
+                const { error } = await _supabase.from('app_suggestions').insert([{
+                    user_device_id: deviceId,
+                    name: name || 'İsimsiz Kullanıcı',
+                    message: message
+                }]);
+
+                if (error) throw error;
+
+                alert("Görüş ve önerileriniz için teşekkür ederiz! Mesajınız başarıyla iletildi. 🚀");
+                closeSuggestionModal();
+            } catch (e) {
+                alert("Gönderilirken bir hata oluştu: " + e.message);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = "Öneriyi Gönder";
+            }
+        }
 
         async function loadPendingReports() {
             const container = document.getElementById('adminReportsContainer');
