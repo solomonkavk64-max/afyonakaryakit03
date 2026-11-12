@@ -3,9 +3,9 @@
     "relation": ["delegate_permission/common.handle_all_urls"],
     "target": {
       "namespace": "android_app",
-      "package_name": "com.garajdefteri.tr",
+      "package_name": "io.github.solomonkavk64_max.afyonakaryakit03",
       "sha256_cert_fingerprints":
-        ["6D:EB:B2:16:B6:BD:30:56:9D:44:7F:33:ED:28:FD:95:72:2E:26:85:B5:31:61:16:D3:26:AA:80:12:80:22:7A"]
+        ["C8:5E:2F:3A:C3:A3:DA:5E:D9:16:97:B5:04:16:6D:A2:D1:6D:E3:3C:11:6B:E9:C2:09:A9:A7:AB:59:D8:0B:42"]
     }
   }
 ]
